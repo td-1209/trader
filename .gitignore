@@ -1,2 +1,4 @@
 # local
 .claude
+.DS_Store
+.keep
