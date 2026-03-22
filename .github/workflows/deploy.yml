@@ -1,0 +1,46 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /opt/trader
+            git pull origin main
+            docker compose up -d --build
+
+      - name: Health check
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            sleep 15
+            for service in "trading:3001" "research:3002" "analysis:3003"; do
+              name="${service%%:*}"
+              port="${service##*:}"
+              status=$(curl -sf "http://localhost:${port}/health" | grep -o '"ok"' || echo "failed")
+              echo "${name}: ${status}"
+              if [ "$status" = "failed" ]; then
+                echo "::error::${name} health check failed"
+                exit 1
+              fi
+            done
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          curl -sf -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"content\": \"Deploy failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\", \"username\": \"GitHub Actions\"}"

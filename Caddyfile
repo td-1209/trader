@@ -1,0 +1,26 @@
+{$DOMAIN:trader-ai.app} {
+	basic_auth {
+		{$BASIC_AUTH_USER} {$BASIC_AUTH_PASSWORD_HASH}
+	}
+
+	handle_path /api/trading/* {
+		reverse_proxy trading:3001
+	}
+
+	handle_path /api/research/* {
+		reverse_proxy research:3002
+	}
+
+	handle_path /api/analysis/* {
+		reverse_proxy analysis:3003
+	}
+
+	handle /images/* {
+		root * /data
+		file_server
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}

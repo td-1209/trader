@@ -1,0 +1,100 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+      - images:/data/images
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
+      - BASIC_AUTH_USER=${BASIC_AUTH_USER}
+      - BASIC_AUTH_PASSWORD_HASH=${BASIC_AUTH_PASSWORD_HASH}
+    depends_on:
+      - web
+      - trading
+      - research
+      - analysis
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    expose:
+      - "3000"
+
+  trading:
+    build:
+      context: .
+      dockerfile: services/trading/Dockerfile
+    restart: unless-stopped
+    expose:
+      - "3001"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - TIINGO_API_KEY=${TIINGO_API_KEY}
+      - XM_TRADING_CREDENTIALS=${XM_TRADING_CREDENTIALS}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+    volumes:
+      - images:/data/images
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  research:
+    build:
+      context: .
+      dockerfile: services/research/Dockerfile
+    restart: unless-stopped
+    expose:
+      - "3002"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - FINNHUB_API_KEY=${FINNHUB_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  analysis:
+    build:
+      context: .
+      dockerfile: services/analysis/Dockerfile
+    restart: unless-stopped
+    expose:
+      - "3003"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    expose:
+      - "5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-trade}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB:-trade_dashboard}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-trade}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  caddy_data:
+  caddy_config:
+  pgdata:
+  images:
