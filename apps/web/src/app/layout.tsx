@@ -1,5 +1,5 @@
 export const metadata = {
-	title: "Trade Dashboard",
+	title: "trader",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

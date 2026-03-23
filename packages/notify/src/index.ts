@@ -15,7 +15,7 @@ export async function sendDiscordNotification(message: DiscordMessage): Promise<
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({
 			content: message.content,
-			username: message.username ?? "Trade Dashboard",
+			username: message.username ?? "trader",
 		}),
 	});
 

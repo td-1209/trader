@@ -1,3 +1,3 @@
 export default function Home() {
-	return <h1>Trade Dashboard</h1>;
+	return <h1>trader</h1>;
 }
