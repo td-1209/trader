@@ -38,7 +38,8 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - TIINGO_API_KEY=${TIINGO_API_KEY}
-      - XM_TRADING_CREDENTIALS=${XM_TRADING_CREDENTIALS}
+      - MT5_BRIDGE_HOST=${MT5_BRIDGE_HOST}
+      - MT5_BRIDGE_PORT=${MT5_BRIDGE_PORT:-5555}
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
     volumes:
       - images:/data/images
