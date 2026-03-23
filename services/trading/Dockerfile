@@ -19,7 +19,7 @@ COPY packages/shared/ packages/shared/
 COPY packages/notify/ packages/notify/
 COPY services/trading/ services/trading/
 RUN pnpm turbo build --filter=@trader/trading
-RUN pnpm deploy --filter=@trader/trading --prod /app/deployed
+RUN pnpm deploy --filter=@trader/trading --prod --legacy /app/deployed
 
 FROM base AS runner
 COPY --from=build /app/deployed/node_modules ./node_modules

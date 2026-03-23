@@ -16,7 +16,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.json ./
 COPY packages/shared/ packages/shared/
 COPY services/research/ services/research/
 RUN pnpm turbo build --filter=@trader/research
-RUN pnpm deploy --filter=@trader/research --prod /app/deployed
+RUN pnpm deploy --filter=@trader/research --prod --legacy /app/deployed
 
 FROM base AS runner
 COPY --from=build /app/deployed/node_modules ./node_modules
