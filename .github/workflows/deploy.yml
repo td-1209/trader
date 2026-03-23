@@ -30,9 +30,9 @@ jobs:
             for service in "trading:3001" "research:3002" "analysis:3003"; do
               name="${service%%:*}"
               port="${service##*:}"
-              status=$(curl -sf "http://localhost:${port}/health" | grep -o '"ok"' || echo "failed")
-              echo "${name}: ${status}"
-              if [ "$status" = "failed" ]; then
+              result=$(docker run --rm --network trader_default curlimages/curl -sf "http://${name}:${port}/health" 2>/dev/null || echo "failed")
+              echo "${name}: ${result}"
+              if echo "$result" | grep -q "failed"; then
                 echo "::error::${name} health check failed"
                 exit 1
               fi
