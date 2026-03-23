@@ -40,7 +40,8 @@ services:
       - TIINGO_API_KEY=${TIINGO_API_KEY}
       - MT5_BRIDGE_HOST=${MT5_BRIDGE_HOST}
       - MT5_BRIDGE_PORT=${MT5_BRIDGE_PORT:-5555}
-      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - DISCORD_WEBHOOK_ALERT=${DISCORD_WEBHOOK_ALERT}
+      - DISCORD_WEBHOOK_TRADE=${DISCORD_WEBHOOK_TRADE}
     volumes:
       - images:/data/images
     depends_on:
@@ -72,7 +73,8 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - DISCORD_WEBHOOK_ALERT=${DISCORD_WEBHOOK_ALERT}
+      - DISCORD_WEBHOOK_MARKET=${DISCORD_WEBHOOK_MARKET}
     depends_on:
       postgres:
         condition: service_healthy

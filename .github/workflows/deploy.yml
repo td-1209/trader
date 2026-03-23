@@ -41,6 +41,6 @@ jobs:
       - name: Notify on failure
         if: failure()
         run: |
-          curl -sf -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+          curl -sf -X POST "${{ secrets.DISCORD_WEBHOOK_ALERT }}" \
             -H "Content-Type: application/json" \
             -d "{\"content\": \"Deploy failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\", \"username\": \"GitHub Actions\"}"
