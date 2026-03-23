@@ -125,23 +125,22 @@
 
 #### 2-1. 価格データ取得
 
-- [ ] Tiingo WebSocket接続（firehose）
-- [ ] 接続管理（起動時接続、切断時に指数バックオフで再接続）
-- [ ] ティックデータのインメモリRing buffer
-- [ ] 5分足OHLC集約ロジック
-- [ ] trading.candlesへの永続化（5分ごとにINSERT）
-- [ ] WebSocketで価格データをweb（クライアント）に配信
+- [x] Tiingo WebSocket接続（FX）
+- [x] 接続管理（起動時接続、切断時に指数バックオフで再接続）
+- [x] 5分足OHLC集約ロジック（インメモリ）
+- [x] trading.candlesへの永続化（5分区間切り替え時にINSERT）
+- [x] WebSocketで価格データ・ローソク足をweb（クライアント）に配信
 
 #### 2-2. 取引記録・資金管理
 
-- [ ] REST API: 取引履歴照会（GET /trades, フィルタ: symbol, domain, method, is_demo）
-- [ ] REST API: 取引詳細取得（GET /trades/:id）
-- [ ] REST API: 取引振り返り更新（PATCH /trades/:id: reason/result_description, images）
-- [ ] REST API: 入出金一覧（GET /cashflows）
-- [ ] REST API: 入出金登録（POST /cashflows）
-- [ ] REST API: 手法一覧（GET /methods）
-- [ ] REST API: 損益サマリ（GET /trades/summary: 期間別、手法別、ドメイン別）
-- [ ] 画像アップロード（POST /trades/:id/images: 5MB制限、png/jpeg/webp）
+- [x] REST API: 取引履歴照会（GET /trades, フィルタ: symbol, domain, method, is_demo）
+- [x] REST API: 取引詳細取得（GET /trades/:id）
+- [x] REST API: 取引振り返り更新（PATCH /trades/:id: reason/result_description, images）
+- [x] REST API: 入出金一覧（GET /cashflows）
+- [x] REST API: 入出金登録（POST /cashflows）
+- [x] REST API: 手法一覧（GET /methods）
+- [x] REST API: 損益サマリ（GET /stats/pnl, /stats/balance: 期間別、手法別、ドメイン別）
+- [x] 画像アップロード（POST /trades/:id/images: 5MB制限、png/jpeg/webp）
 
 #### 2-3. 注文執行（MT5 ZeroMQブリッジ）
 
