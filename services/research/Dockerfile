@@ -22,6 +22,7 @@ FROM base AS runner
 COPY --from=build /app/deployed/node_modules ./node_modules
 COPY --from=build /app/services/research/dist ./dist
 COPY --from=build /app/packages/shared/dist ./node_modules/@trader/shared/dist
+RUN sed -i 's|./src/index.ts|./dist/index.js|' ./node_modules/@trader/shared/package.json
 ENV NODE_ENV=production
 EXPOSE 3002
 CMD ["node", "dist/index.js"]

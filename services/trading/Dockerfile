@@ -26,6 +26,8 @@ COPY --from=build /app/deployed/node_modules ./node_modules
 COPY --from=build /app/services/trading/dist ./dist
 COPY --from=build /app/packages/shared/dist ./node_modules/@trader/shared/dist
 COPY --from=build /app/packages/notify/dist ./node_modules/@trader/notify/dist
+RUN sed -i 's|./src/index.ts|./dist/index.js|' ./node_modules/@trader/shared/package.json && \
+    sed -i 's|./src/index.ts|./dist/index.js|' ./node_modules/@trader/notify/package.json
 ENV NODE_ENV=production
 EXPOSE 3001
 CMD ["node", "dist/index.js"]
