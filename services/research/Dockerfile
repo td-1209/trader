@@ -16,10 +16,11 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.json ./
 COPY packages/shared/ packages/shared/
 COPY services/research/ services/research/
 RUN pnpm turbo build --filter=@trader/research
+RUN pnpm deploy --filter=@trader/research --prod /app/deployed
 
 FROM base AS runner
+COPY --from=build /app/deployed/node_modules ./node_modules
 COPY --from=build /app/services/research/dist ./dist
-COPY --from=build /app/services/research/node_modules ./node_modules
 COPY --from=build /app/packages/shared/dist ./node_modules/@trader/shared/dist
 ENV NODE_ENV=production
 EXPOSE 3002

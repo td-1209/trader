@@ -19,10 +19,11 @@ COPY packages/shared/ packages/shared/
 COPY packages/notify/ packages/notify/
 COPY services/trading/ services/trading/
 RUN pnpm turbo build --filter=@trader/trading
+RUN pnpm deploy --filter=@trader/trading --prod /app/deployed
 
 FROM base AS runner
+COPY --from=build /app/deployed/node_modules ./node_modules
 COPY --from=build /app/services/trading/dist ./dist
-COPY --from=build /app/services/trading/node_modules ./node_modules
 COPY --from=build /app/packages/shared/dist ./node_modules/@trader/shared/dist
 COPY --from=build /app/packages/notify/dist ./node_modules/@trader/notify/dist
 ENV NODE_ENV=production
