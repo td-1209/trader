@@ -14,15 +14,16 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
-    "@trader/shared": "workspace:*",
-    "hono": "^4.7.0",
+    "@anthropic-ai/sdk": "^0.80.0",
     "@hono/node-server": "^1.14.0",
+    "@trader/shared": "workspace:*",
     "drizzle-orm": "^0.39.0",
+    "hono": "^4.7.0",
     "postgres": "^3.4.0"
   },
   "devDependencies": {
-    "typescript": "^5.7.0",
+    "drizzle-kit": "^0.30.0",
     "tsx": "^4.19.0",
-    "drizzle-kit": "^0.30.0"
+    "typescript": "^5.7.0"
   }
 }
