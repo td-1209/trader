@@ -113,14 +113,15 @@ string HandleOrder(string json)
    MqlTradeRequest request = {};
    MqlTradeResult  result  = {};
 
-   request.action    = TRADE_ACTION_DEAL;
-   request.symbol    = symbol;
-   request.volume    = volume;
-   request.type      = orderType;
-   request.price     = price;
-   request.deviation = 10;
-   request.magic     = 123456;
-   request.comment   = "TraderBridge";
+   request.action       = TRADE_ACTION_DEAL;
+   request.symbol       = symbol;
+   request.volume       = volume;
+   request.type         = orderType;
+   request.price        = price;
+   request.deviation    = 10;
+   request.magic        = 123456;
+   request.comment      = "TraderBridge";
+   request.type_filling = ORDER_FILLING_IOC;
 
    if(!OrderSend(request, result))
       return "{\"success\":false,\"error\":\"OrderSend failed: " + IntegerToString(result.retcode) + "\"}";
@@ -154,13 +155,14 @@ string HandleClose(string json)
    MqlTradeRequest request = {};
    MqlTradeResult  result  = {};
 
-   request.action   = TRADE_ACTION_DEAL;
-   request.symbol   = symbol;
-   request.volume   = volume;
-   request.type     = closeType;
-   request.price    = price;
-   request.position = ticket;
-   request.deviation = 10;
+   request.action       = TRADE_ACTION_DEAL;
+   request.symbol       = symbol;
+   request.volume       = volume;
+   request.type         = closeType;
+   request.price        = price;
+   request.position     = ticket;
+   request.deviation    = 10;
+   request.type_filling = ORDER_FILLING_IOC;
    request.magic    = 123456;
    request.comment  = "TraderBridge Close";
 

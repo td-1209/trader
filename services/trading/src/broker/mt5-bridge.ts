@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { sendDiscordNotification } from "@trader/notify";
 
 interface BridgeCommand {
 	id: string;
@@ -33,6 +34,15 @@ app.get("/bridge/commands", (c) => {
 // MT5 EAが結果を返すエンドポイント
 app.post("/bridge/results", async (c) => {
 	const result = (await c.req.json()) as BridgeResult;
+
+	if (!result.success) {
+		console.error(`MT5 bridge error: ${result.error} (command: ${result.commandId})`);
+		sendDiscordNotification({
+			content: `⚠️ MT5注文エラー: ${result.error}`,
+			channel: "alert",
+		});
+	}
+
 	const callback = resultCallbacks.get(result.commandId);
 	if (callback) {
 		callback(result);
