@@ -19,9 +19,11 @@
     "@trader/shared": "workspace:*",
     "drizzle-orm": "^0.39.0",
     "hono": "^4.7.0",
+    "node-cron": "^4.2.1",
     "postgres": "^3.4.0"
   },
   "devDependencies": {
+    "@types/node-cron": "^3.0.11",
     "drizzle-kit": "^0.30.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"

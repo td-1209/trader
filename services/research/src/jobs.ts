@@ -1,13 +1,9 @@
-import { desc, gte, sql, and } from "drizzle-orm";
+import cron from "node-cron";
+import { desc, gte } from "drizzle-orm";
 import { db } from "./db/client.js";
 import { news, calendars, sentiments } from "./db/schema.js";
 import { fetchNews, fetchEconomicCalendar } from "./finnhub.js";
 import { analyzeSentiment } from "./claude.js";
-
-const NEWS_INTERVAL = 5 * 60 * 1000;
-const CALENDAR_INTERVAL = 60 * 60 * 1000;
-const SENTIMENT_INTERVAL = 60 * 60 * 1000;
-const STARTUP_DELAY = 10_000;
 
 const SENTIMENT_TARGETS = (process.env.SENTIMENT_TARGETS ?? "USD/JPY,EUR/USD,XAU/USD").split(",");
 
@@ -31,7 +27,7 @@ async function newsJob() {
 			publishedAt: new Date(item.datetime * 1000),
 		}));
 
-		const result = await db.insert(news).values(values).onConflictDoNothing();
+		await db.insert(news).values(values).onConflictDoNothing();
 		console.log(`News job: fetched ${items.length}, inserted new items`);
 	} catch (err) {
 		console.error("News job failed:", err);
@@ -113,15 +109,14 @@ async function sentimentJob() {
 }
 
 export function startJobs() {
-	setTimeout(() => {
-		newsJob();
-		calendarJob();
-		sentimentJob();
-	}, STARTUP_DELAY);
+	// 起動時: ニュース取得 → 完了後にセンチメント分析
+	newsJob().then(() => sentimentJob());
+	calendarJob();
 
-	setInterval(newsJob, NEWS_INTERVAL);
-	setInterval(calendarJob, CALENDAR_INTERVAL);
-	setInterval(sentimentJob, SENTIMENT_INTERVAL);
+	// 定期実行（cron式）
+	cron.schedule("*/5 * * * *", newsJob);        // 5分ごと: ニュース取得
+	cron.schedule("0 * * * *", calendarJob);       // 毎時0分: 経済カレンダー
+	cron.schedule("5 * * * *", sentimentJob);      // 毎時5分: センチメント（ニュース取得の後）
 
-	console.log("Research jobs started");
+	console.log("Research jobs started (node-cron)");
 }
