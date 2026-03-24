@@ -124,10 +124,10 @@ string HandleOrder(string json)
    request.type_filling = ORDER_FILLING_IOC;
 
    if(!OrderSend(request, result))
-      return "{\"success\":false,\"error\":\"OrderSend failed: " + IntegerToString(result.retcode) + "\"}";
+      return "{\"success\":false,\"error\":\"OrderSend failed: " + IntegerToString(result.retcode) + " " + result.comment + "\"}";
 
    if(result.retcode != TRADE_RETCODE_DONE)
-      return "{\"success\":false,\"error\":\"Rejected: " + IntegerToString(result.retcode) + "\"}";
+      return "{\"success\":false,\"error\":\"Rejected: " + IntegerToString(result.retcode) + " " + result.comment + "\"}";
 
    return "{\"success\":true,\"ticket\":\"" + IntegerToString(result.deal) +
           "\",\"price\":\"" + DoubleToString(result.price, 8) + "\"}";
@@ -167,10 +167,10 @@ string HandleClose(string json)
    request.comment  = "TraderBridge Close";
 
    if(!OrderSend(request, result))
-      return "{\"success\":false,\"error\":\"Close failed: " + IntegerToString(result.retcode) + "\"}";
+      return "{\"success\":false,\"error\":\"Close failed: " + IntegerToString(result.retcode) + " " + result.comment + "\"}";
 
    if(result.retcode != TRADE_RETCODE_DONE)
-      return "{\"success\":false,\"error\":\"Close rejected: " + IntegerToString(result.retcode) + "\"}";
+      return "{\"success\":false,\"error\":\"Close rejected: " + IntegerToString(result.retcode) + " " + result.comment + "\"}";
 
    double profit = PositionGetDouble(POSITION_PROFIT);
 
