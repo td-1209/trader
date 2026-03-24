@@ -1,6 +1,7 @@
 import WebSocket from "ws";
 import { ohlcAggregator } from "./ohlc.js";
 import { broadcast } from "./server.js";
+import { positionCache } from "../positions.js";
 
 let ws: WebSocket | null = null;
 let reconnectAttempt = 0;
@@ -69,6 +70,8 @@ function connect() {
 				mid: quote.mid,
 				timestamp: quote.timestamp,
 			});
+
+			positionCache.checkStopLossTakeProfit(quote.symbol, Number(quote.bid), Number(quote.ask));
 		}
 	});
 

@@ -1,12 +1,22 @@
+type Channel = "alert" | "trade" | "market";
+
 interface DiscordMessage {
 	content: string;
 	username?: string;
+	channel?: Channel;
 }
 
+const WEBHOOK_ENV: Record<Channel, string> = {
+	alert: "DISCORD_WEBHOOK_ALERT",
+	trade: "DISCORD_WEBHOOK_TRADE",
+	market: "DISCORD_WEBHOOK_MARKET",
+};
+
 export async function sendDiscordNotification(message: DiscordMessage): Promise<void> {
-	const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+	const channel = message.channel ?? "alert";
+	const webhookUrl = process.env[WEBHOOK_ENV[channel]];
 	if (!webhookUrl) {
-		console.warn("DISCORD_WEBHOOK_URL is not set, skipping notification");
+		console.warn(`${WEBHOOK_ENV[channel]} is not set, skipping notification`);
 		return;
 	}
 
