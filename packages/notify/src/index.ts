@@ -28,16 +28,18 @@ export async function sendDiscordNotification(message: DiscordMessage): Promise<
 	}
 
 	const params = new URLSearchParams({ wait: "true" });
-	if (message.threadName) params.set("thread_name", message.threadName);
 	if (message.threadId) params.set("thread_id", message.threadId);
+
+	const body: Record<string, unknown> = {
+		content: message.content,
+		username: message.username ?? "trader",
+	};
+	if (message.threadName) body.thread_name = message.threadName;
 
 	const response = await fetch(`${webhookUrl}?${params}`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({
-			content: message.content,
-			username: message.username ?? "trader",
-		}),
+		body: JSON.stringify(body),
 	});
 
 	if (!response.ok) {
