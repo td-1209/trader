@@ -4,6 +4,13 @@ interface DiscordMessage {
 	content: string;
 	username?: string;
 	channel?: Channel;
+	threadName?: string;
+	threadId?: string;
+}
+
+interface DiscordResponse {
+	id: string;
+	channel_id: string;
 }
 
 const WEBHOOK_ENV: Record<Channel, string> = {
@@ -12,15 +19,19 @@ const WEBHOOK_ENV: Record<Channel, string> = {
 	market: "DISCORD_WEBHOOK_MARKET",
 };
 
-export async function sendDiscordNotification(message: DiscordMessage): Promise<void> {
+export async function sendDiscordNotification(message: DiscordMessage): Promise<DiscordResponse | null> {
 	const channel = message.channel ?? "alert";
 	const webhookUrl = process.env[WEBHOOK_ENV[channel]];
 	if (!webhookUrl) {
 		console.warn(`${WEBHOOK_ENV[channel]} is not set, skipping notification`);
-		return;
+		return null;
 	}
 
-	const response = await fetch(webhookUrl, {
+	const params = new URLSearchParams({ wait: "true" });
+	if (message.threadName) params.set("thread_name", message.threadName);
+	if (message.threadId) params.set("thread_id", message.threadId);
+
+	const response = await fetch(`${webhookUrl}?${params}`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({
@@ -31,5 +42,8 @@ export async function sendDiscordNotification(message: DiscordMessage): Promise<
 
 	if (!response.ok) {
 		console.error(`Discord notification failed: ${response.status} ${response.statusText}`);
+		return null;
 	}
+
+	return (await response.json()) as DiscordResponse;
 }

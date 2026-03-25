@@ -67,12 +67,36 @@ export async function runAnalysis(analysisId: string, type: string, symbol: stri
 			metadata: result.metadata,
 		}).where(eq(analyses.id, analysisId));
 
-		// Discord通知（速報・戦略のみ）
+		// Discord通知（速報・戦略のみ）— フォーラムスレッドにセクション分割投稿
 		if (type === "flash_report" || type === "strategy") {
-			await sendDiscordNotification({
-				content: `📊 ${result.title}\n${result.content.slice(0, 300)}...`,
+			const meta = result.metadata as Record<string, unknown>;
+
+			// スレッド作成（タイトル + サマリー）
+			let summary = `📊 **${result.title}**`;
+			if (type === "flash_report" && Array.isArray(meta.scenarios)) {
+				const scenarios = meta.scenarios as { name: string; probability: number; targetPrice: string }[];
+				summary += "\n" + scenarios.map(s => `• ${s.name}: ${s.probability}%（${s.targetPrice}）`).join("\n");
+			}
+
+			const threadResult = await sendDiscordNotification({
+				content: summary,
 				channel: "market",
+				threadName: result.title.slice(0, 100),
 			});
+
+			// スレッドに詳細をセクション分割で投稿
+			if (threadResult?.channel_id) {
+				const threadId = threadResult.channel_id;
+				const sections = result.content.split(/\n(?=## )/).filter(Boolean);
+				for (const section of sections) {
+					if (section.trim().length === 0) continue;
+					await sendDiscordNotification({
+						content: section.slice(0, 2000),
+						channel: "market",
+						threadId,
+					});
+				}
+			}
 		}
 
 		console.log(`Analysis completed: ${type} ${analysisId}`);
