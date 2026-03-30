@@ -43,9 +43,6 @@ async function flashReportJob() {
 
 async function improvementJob() {
 	try {
-		// 月曜のみ実行
-		if (new Date().getDay() !== 1) return;
-
 		const trades = await fetchTrades({ status: "exited", limit: 50 });
 		if (trades.length < 3) {
 			console.log("Improvement job: not enough trades, skipping");
@@ -75,8 +72,8 @@ export function startJobs() {
 	// 速報分析: 4時間ごと
 	cron.schedule("0 */4 * * *", flashReportJob);
 
-	// 改善提案: 毎日9時チェック（月曜のみ実行）
-	cron.schedule("0 9 * * *", improvementJob);
+	// 改善提案: 毎週月曜JST 9:00（UTC 0:00）
+	cron.schedule("0 0 * * 1", improvementJob);
 
 	console.log("Analysis jobs started (node-cron)");
 }
