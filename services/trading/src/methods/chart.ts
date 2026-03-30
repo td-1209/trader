@@ -3,7 +3,7 @@ import type { Candle, Signal } from "./types.js";
 
 const WIDTH = 800;
 const HEIGHT = 500;
-const PADDING = { top: 20, right: 80, bottom: 30, left: 10 };
+const PADDING = { top: 20, right: 100, bottom: 45, left: 10 };
 const CHART_W = WIDTH - PADDING.left - PADDING.right;
 const CHART_H = HEIGHT - PADDING.top - PADDING.bottom;
 
@@ -17,7 +17,7 @@ const COLORS = {
 	sl: "#f44336",
 	lineUpper: "#ff7043",
 	lineLower: "#42a5f5",
-	text: "#cccccc",
+	text: "#ffffff",
 	label: "#ffffff",
 };
 
@@ -64,14 +64,14 @@ export async function renderChart(candles: Candle[], signal: Signal): Promise<Bu
 		// 価格ラベル
 		const price = adjMax - (adjRange / gridSteps) * i;
 		ctx.fillStyle = COLORS.text;
-		ctx.font = "11px monospace";
+		ctx.font = "12px sans-serif";
 		ctx.textAlign = "left";
 		ctx.fillText(formatPrice(price), PADDING.left + CHART_W + 5, y + 4);
 	}
 
 	// 時刻ラベル（X軸）
 	ctx.fillStyle = COLORS.text;
-	ctx.font = "10px monospace";
+	ctx.font = "12px sans-serif";
 	ctx.textAlign = "center";
 	const timeStep = Math.max(1, Math.floor(candles.length / 8));
 	for (let i = 0; i < candles.length; i += timeStep) {
@@ -165,7 +165,7 @@ function drawHorizontalLine(ctx: ReturnType<Canvas["getContext"]>, y: number, co
 }
 
 function drawPriceLabel(ctx: ReturnType<Canvas["getContext"]>, y: number, text: string, color: string) {
-	ctx.font = "10px monospace";
+	ctx.font = "11px sans-serif";
 	ctx.fillStyle = color;
 	ctx.textAlign = "left";
 	ctx.fillText(text, PADDING.left + CHART_W + 5, y - 3);
