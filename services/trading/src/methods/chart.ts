@@ -10,8 +10,8 @@ const CHART_H = HEIGHT - PADDING.top - PADDING.bottom;
 const COLORS = {
 	bg: "#1a1a2e",
 	grid: "#2a2a4a",
-	bullish: "#26a69a",
-	bearish: "#ef5350",
+	bullish: "#ef5350",
+	bearish: "#42a5f5",
 	entry: "#ff9800",
 	tp: "#4caf50",
 	sl: "#f44336",
