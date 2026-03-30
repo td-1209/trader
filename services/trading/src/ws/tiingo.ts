@@ -2,6 +2,7 @@ import WebSocket from "ws";
 import { ohlcAggregator } from "./ohlc.js";
 import { broadcast } from "./server.js";
 import { positionCache } from "../positions.js";
+import { sendDiscordNotification } from "@trader/notify";
 
 let ws: WebSocket | null = null;
 let reconnectAttempt = 0;
@@ -82,6 +83,7 @@ function connect() {
 
 	ws.on("error", (err) => {
 		console.error("Tiingo WebSocket error:", err.message);
+		sendDiscordNotification({ content: `⚠️ Tiingo接続エラー: ${err.message}`, channel: "alert" });
 		ws?.close();
 	});
 }

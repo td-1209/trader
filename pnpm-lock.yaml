@@ -107,6 +107,9 @@ importers:
       '@hono/node-server':
         specifier: ^1.14.0
         version: 1.19.11(hono@4.12.8)
+      '@trader/notify':
+        specifier: workspace:*
+        version: link:../../packages/notify
       '@trader/shared':
         specifier: workspace:*
         version: link:../../packages/shared

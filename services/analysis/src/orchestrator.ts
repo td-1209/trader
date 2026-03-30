@@ -106,6 +106,7 @@ export async function runAnalysis(analysisId: string, type: string, symbol: stri
 			status: "failed",
 			content: String(err),
 		}).where(eq(analyses.id, analysisId));
+		sendDiscordNotification({ content: `⚠️ 分析エラー（${type} ${symbol ?? ""}）: ${err}`, channel: "alert" });
 	}
 }
 

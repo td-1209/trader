@@ -4,6 +4,7 @@ import { db } from "./db/client.js";
 import { news, calendars, sentiments } from "./db/schema.js";
 import { fetchNews, fetchEconomicCalendar } from "./finnhub.js";
 import { analyzeSentiment } from "./claude.js";
+import { sendDiscordNotification } from "@trader/notify";
 
 const SENTIMENT_TARGETS = (process.env.SENTIMENT_TARGETS ?? "USD/JPY,EUR/USD,XAU/USD").split(",");
 
@@ -31,6 +32,7 @@ async function newsJob() {
 		console.log(`News job: fetched ${items.length}, inserted new items`);
 	} catch (err) {
 		console.error("News job failed:", err);
+		sendDiscordNotification({ content: `⚠️ ニュース取得エラー: ${err}`, channel: "alert" });
 	}
 }
 
@@ -70,6 +72,7 @@ async function calendarJob() {
 		console.log(`Calendar job: processed ${items.length} events`);
 	} catch (err) {
 		console.error("Calendar job failed:", err);
+		sendDiscordNotification({ content: `⚠️ 経済カレンダー取得エラー: ${err}`, channel: "alert" });
 	}
 }
 
@@ -104,6 +107,7 @@ async function sentimentJob() {
 			console.log(`Sentiment job: ${target} → ${result.label} (${result.score})`);
 		} catch (err) {
 			console.error(`Sentiment job failed for ${target}:`, err);
+			sendDiscordNotification({ content: `⚠️ センチメント分析エラー（${target}）: ${err}`, channel: "alert" });
 		}
 	}
 }
