@@ -19,42 +19,55 @@ export interface Line {
 function detectPoints(candles: Candle[]): Point[] {
 	const points: Point[] = [];
 
-	for (let i = 2; i < candles.length - 2; i++) {
-		const curr = candles[i];
-		const prevLows = [candles[i - 2].low, candles[i - 1].low];
-		const nextLows = [candles[i + 1].low, candles[i + 2].low];
-		const prevHighs = [candles[i - 2].high, candles[i - 1].high];
-		const nextHighs = [candles[i + 1].high, candles[i + 2].high];
+	const period = 3;
+	const half = Math.floor(period / 2);
 
-		const minThreshold = curr.close * 0.0002; // 0.02%
-
-		const maxPrevHigh = Math.max(...prevHighs);
-		const maxNextHigh = Math.max(...nextHighs);
-		if (curr.high > maxPrevHigh && curr.high > maxNextHigh
-			&& curr.high - Math.max(maxPrevHigh, maxNextHigh) >= minThreshold) {
-			points.push({ price: curr.high, type: "peak", index: i });
-		}
-
-		const minPrevLow = Math.min(...prevLows);
-		const minNextLow = Math.min(...nextLows);
-		if (curr.low < minPrevLow && curr.low < minNextLow
-			&& Math.min(minPrevLow, minNextLow) - curr.low >= minThreshold) {
-			points.push({ price: curr.low, type: "trough", index: i });
+	// 山検出用: highのSMA
+	const smaHigh: number[] = [];
+	// 谷検出用: lowのSMA
+	const smaLow: number[] = [];
+	for (let i = 0; i < candles.length; i++) {
+		if (i < half || i >= candles.length - half) {
+			smaHigh.push(candles[i].high);
+			smaLow.push(candles[i].low);
+		} else {
+			let sumH = 0;
+			let sumL = 0;
+			for (let j = i - half; j <= i + half; j++) {
+				sumH += candles[j].high;
+				sumL += candles[j].low;
+			}
+			smaHigh.push(sumH / period);
+			smaLow.push(sumL / period);
 		}
 	}
 
-	return deduplicateNearby(points);
+	// SMAの極値を検出、ラインは前後1本を含む最大high/最小low
+	for (let i = 1; i < candles.length - 1; i++) {
+		if (smaHigh[i - 1] < smaHigh[i] && smaHigh[i] > smaHigh[i + 1]) {
+			const maxHigh = Math.max(candles[i - 1].high, candles[i].high, candles[i + 1].high);
+			points.push({ price: maxHigh, type: "peak", index: i });
+		}
+		if (smaLow[i - 1] > smaLow[i] && smaLow[i] < smaLow[i + 1]) {
+			const minLow = Math.min(candles[i - 1].low, candles[i].low, candles[i + 1].low);
+			points.push({ price: minLow, type: "trough", index: i });
+		}
+	}
+
+	const peaks = deduplicateNearby(points.filter((p) => p.type === "peak"));
+	const troughs = deduplicateNearby(points.filter((p) => p.type === "trough"));
+	return [...peaks, ...troughs];
 }
 
 /**
- * 2本以内に同種が隣接する場合、絶対値がより大きい方のみ残す。
+ * 10本以内に同種が隣接する場合、絶対値がより大きい方のみ残す。
  */
 function deduplicateNearby(points: Point[]): Point[] {
 	const result: Point[] = [];
 
 	for (const point of points) {
 		const last = result[result.length - 1];
-		if (!last || last.type !== point.type || point.index - last.index > 2) {
+		if (!last || last.type !== point.type || point.index - last.index > 10) {
 			result.push(point);
 			continue;
 		}
