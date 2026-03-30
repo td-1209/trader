@@ -15,3 +15,7 @@ terraform.tfvars
 .claude
 .DS_Store
 .keep
+
+# test data
+**/test/data/*
+!**/test/data/.gitkeep

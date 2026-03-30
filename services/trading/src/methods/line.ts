@@ -67,19 +67,48 @@ function deduplicateNearby(points: Point[]): Point[] {
 export function findLines(currentPrice: number, candles: Candle[]): { upper: Line[]; lower: Line[] } {
 	const points = detectPoints(candles);
 
-	const upper = points
-		.filter((p) => p.price > currentPrice)
-		.sort((a, b) => a.price - b.price)
-		.slice(0, 3)
+	const priceRange = Math.max(...candles.map((c) => c.high)) - Math.min(...candles.map((c) => c.low));
+	const clusterThreshold = priceRange * 0.04;
+
+	// 上: 現在価格より上の山（レジスタンス）、現在価格に近すぎるものを除外 → クラスタリング
+	const upperRaw = points
+		.filter((p) => p.type === "peak" && p.price > currentPrice + clusterThreshold)
+		.sort((a, b) => a.price - b.price);
+	const upper = clusterLines(upperRaw, clusterThreshold, "peak")
 		.map(({ price, type }) => ({ price, type }));
 
-	const lower = points
-		.filter((p) => p.price < currentPrice)
-		.sort((a, b) => b.price - a.price)
-		.slice(0, 3)
+	// 下: 現在価格より下の谷（サポート）、現在価格に近すぎるものを除外 → クラスタリング
+	const lowerRaw = points
+		.filter((p) => p.type === "trough" && p.price < currentPrice - clusterThreshold)
+		.sort((a, b) => b.price - a.price);
+	const lower = clusterLines(lowerRaw, clusterThreshold, "trough")
 		.map(({ price, type }) => ({ price, type }));
 
 	return { upper, lower };
+}
+
+/**
+ * 一定距離以内のラインをクラスタリングし、代表値を返す。
+ * 山: グループ内の最高値、谷: グループ内の最安値
+ */
+function clusterLines(points: Point[], threshold: number, type: "peak" | "trough"): Point[] {
+	const result: Point[] = [];
+
+	for (const point of points) {
+		const last = result[result.length - 1];
+		if (last && Math.abs(point.price - last.price) <= threshold) {
+			// 同クラスタ: 山なら高い方、谷なら低い方を採用
+			if (type === "peak" && point.price > last.price) {
+				result[result.length - 1] = point;
+			} else if (type === "trough" && point.price < last.price) {
+				result[result.length - 1] = point;
+			}
+		} else {
+			result.push(point);
+		}
+	}
+
+	return result;
 }
 
 /**
