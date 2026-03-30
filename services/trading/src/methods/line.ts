@@ -26,12 +26,20 @@ function detectPoints(candles: Candle[]): Point[] {
 		const prevHighs = [candles[i - 2].high, candles[i - 1].high];
 		const nextHighs = [candles[i + 1].high, candles[i + 2].high];
 
-		if (curr.low < Math.min(...prevLows) && curr.low < Math.min(...nextLows)) {
-			points.push({ price: curr.low, type: "trough", index: i });
+		const minThreshold = curr.close * 0.0002; // 0.02%
+
+		const maxPrevHigh = Math.max(...prevHighs);
+		const maxNextHigh = Math.max(...nextHighs);
+		if (curr.high > maxPrevHigh && curr.high > maxNextHigh
+			&& curr.high - Math.max(maxPrevHigh, maxNextHigh) >= minThreshold) {
+			points.push({ price: curr.high, type: "peak", index: i });
 		}
 
-		if (curr.high > Math.max(...prevHighs) && curr.high > Math.max(...nextHighs)) {
-			points.push({ price: curr.high, type: "peak", index: i });
+		const minPrevLow = Math.min(...prevLows);
+		const minNextLow = Math.min(...nextLows);
+		if (curr.low < minPrevLow && curr.low < minNextLow
+			&& Math.min(minPrevLow, minNextLow) - curr.low >= minThreshold) {
+			points.push({ price: curr.low, type: "trough", index: i });
 		}
 	}
 
