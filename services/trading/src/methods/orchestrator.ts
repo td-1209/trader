@@ -4,6 +4,7 @@ import { methods, trades } from "../db/schema.js";
 import { mt5Bridge } from "../broker/mt5-bridge.js";
 import { sendDiscordNotification } from "@trader/notify";
 import { onFiveMinuteClose, fetchCandles } from "./aggregator.js";
+import { renderChart } from "./chart.js";
 import { pivotUpdate } from "./pivot-update.js";
 import type { Method, Signal } from "./types.js";
 
@@ -22,9 +23,6 @@ export async function onCandleClose(symbol: string, bar: { open: number; high: n
 	}
 }
 
-/**
- * 指定symbol/timeframeに該当する有効な手法を実行する。
- */
 async function evaluateMethods(symbol: string, timeframe: string) {
 	const activeMethods = await db
 		.select()
@@ -36,7 +34,6 @@ async function evaluateMethods(symbol: string, timeframe: string) {
 			),
 		);
 
-	// symbol一致またはsymbol未指定の手法をフィルタ
 	const matching = activeMethods.filter(
 		(m) => !m.symbol || m.symbol === symbol,
 	);
@@ -55,7 +52,7 @@ async function evaluateMethods(symbol: string, timeframe: string) {
 }
 
 async function executeMethod(
-	method: { id: string; name: string; symbol: string | null },
+	method: { id: string; name: string; symbol: string | null; mode: string },
 	symbol: string,
 	timeframe: string,
 ) {
@@ -79,18 +76,46 @@ async function executeMethod(
 
 	if (openTrades.length > 0) return;
 
-	// ローソク足データ取得
 	const candles = await fetchCandles(symbol, timeframe);
 	if (candles.length < 5) return;
 
-	// 手法実行
 	const signal = impl.execute(symbol, timeframe, candles);
 	if (!signal) return;
 
-	console.log(`Signal: ${method.name} ${symbol} ${timeframe} → ${signal.position} @ ${signal.entryPrice}`);
+	console.log(`Signal: ${method.name} ${symbol} ${timeframe} → ${signal.position} @ ${signal.entryPrice} (mode: ${method.mode})`);
 
-	// MT5ブリッジ経由で注文
-	await placeSignalOrder(method, symbol, signal);
+	if (method.mode === "live") {
+		await placeSignalOrder(method, symbol, signal);
+	} else {
+		await notifySignal(method, symbol, timeframe, signal, candles);
+	}
+}
+
+async function notifySignal(
+	method: { id: string; name: string },
+	symbol: string,
+	timeframe: string,
+	signal: Signal,
+	candles: Awaited<ReturnType<typeof fetchCandles>>,
+) {
+	const reward = Math.abs(signal.entryPrice - signal.takeProfitPrice);
+	const risk = Math.abs(signal.entryPrice - signal.stopLossPrice);
+	const rr = risk > 0 ? (reward / risk).toFixed(2) : "N/A";
+
+	const content = [
+		`🤖 シグナル検出: ${method.name}`,
+		`${symbol} ${timeframe}足 → ${signal.position} @ ${formatPrice(signal.entryPrice)}`,
+		`TP: ${formatPrice(signal.takeProfitPrice)} / SL: ${formatPrice(signal.stopLossPrice)} (RR: ${rr})`,
+		signal.reason,
+	].join("\n");
+
+	try {
+		const image = await renderChart(candles, signal);
+		await sendDiscordNotification({ content, channel: "trade", image });
+	} catch (err) {
+		console.error("Chart render failed, sending without image:", err);
+		await sendDiscordNotification({ content, channel: "trade" });
+	}
 }
 
 async function placeSignalOrder(
@@ -98,7 +123,6 @@ async function placeSignalOrder(
 	symbol: string,
 	signal: Signal,
 ) {
-	// 最小ロット（0.01）で発注
 	const volume = 0.01;
 
 	try {
@@ -109,14 +133,13 @@ async function placeSignalOrder(
 			return;
 		}
 
-		// DB記録
 		await db.insert(trades).values({
 			method: method.id,
 			symbol,
 			domain: "fx",
 			position: signal.position,
 			status: "open",
-			exposure: String(volume * 100000), // 0.01 lot = 1000通貨
+			exposure: String(volume * 100000),
 			entryPrice: result.price ?? String(signal.entryPrice),
 			takeProfitPrice: String(signal.takeProfitPrice),
 			stopLossPrice: String(signal.stopLossPrice),
@@ -138,4 +161,10 @@ async function placeSignalOrder(
 			channel: "alert",
 		});
 	}
+}
+
+function formatPrice(price: number): string {
+	if (price >= 100) return price.toFixed(3);
+	if (price >= 10) return price.toFixed(4);
+	return price.toFixed(5);
 }

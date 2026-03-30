@@ -22,6 +22,7 @@ export const methods = trading.table(
 		symbol: text(),
 		domain: text().notNull(),
 		timeframe: text().notNull(),
+		mode: text().notNull().default("notify"),
 		isActive: boolean("is_active").notNull().default(true),
 		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 		updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),

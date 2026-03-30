@@ -6,12 +6,19 @@ export interface Candle {
 	timestamp: string;
 }
 
+export interface Line {
+	price: number;
+	type: "peak" | "trough";
+}
+
 export interface Signal {
 	position: "long" | "short";
 	entryPrice: number;
 	takeProfitPrice: number;
 	stopLossPrice: number;
 	reason: string;
+	upperLines: Line[];
+	lowerLines: Line[];
 }
 
 export interface Method {

@@ -20,6 +20,7 @@
     "drizzle-orm": "^0.39.0",
     "hono": "^4.7.0",
     "postgres": "^3.4.0",
+    "skia-canvas": "^3.0.8",
     "ws": "^8.20.0"
   },
   "devDependencies": {

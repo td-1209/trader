@@ -1,4 +1,5 @@
 FROM node:20-alpine AS base
+RUN apk add --no-cache fontconfig
 RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
 WORKDIR /app
 
