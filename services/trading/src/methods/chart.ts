@@ -133,7 +133,7 @@ export async function renderChart(candles: Candle[], signal: Signal): Promise<Bu
 	return Buffer.from(await canvas.toBuffer("png"));
 }
 
-function drawHorizontalLine(ctx: CanvasRenderingContext2D, y: number, color: string, dashed: boolean) {
+function drawHorizontalLine(ctx: ReturnType<Canvas["getContext"]>, y: number, color: string, dashed: boolean) {
 	ctx.strokeStyle = color;
 	ctx.lineWidth = 1;
 	ctx.setLineDash(dashed ? [6, 4] : []);
@@ -144,7 +144,7 @@ function drawHorizontalLine(ctx: CanvasRenderingContext2D, y: number, color: str
 	ctx.setLineDash([]);
 }
 
-function drawPriceLabel(ctx: CanvasRenderingContext2D, y: number, text: string, color: string) {
+function drawPriceLabel(ctx: ReturnType<Canvas["getContext"]>, y: number, text: string, color: string) {
 	ctx.font = "10px monospace";
 	ctx.fillStyle = color;
 	ctx.textAlign = "left";
