@@ -38,6 +38,9 @@ async function evaluateMethods(symbol: string, timeframe: string) {
 		(m) => !m.symbol || m.symbol === symbol,
 	);
 
+	if (matching.length === 0) return;
+	console.log(`Evaluating ${matching.length} method(s) for ${symbol} ${timeframe}`);
+
 	for (const method of matching) {
 		try {
 			await executeMethod(method, symbol, timeframe);
