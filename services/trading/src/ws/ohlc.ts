@@ -1,6 +1,7 @@
 import { db } from "../db/client.js";
 import { candles } from "../db/schema.js";
 import { broadcast } from "./server.js";
+import { onCandleClose } from "../methods/orchestrator.js";
 
 interface Bar {
 	open: number;
@@ -72,6 +73,11 @@ async function persistCandle(symbol: string, bar: Bar) {
 		});
 
 		console.log(`Candle persisted: ${symbol} ${timestamp.toISOString()}`);
+
+		// オーケストレーター: 上位足集約 + 手法実行
+		onCandleClose(symbol, { open: bar.open, high: bar.high, low: bar.low, close: bar.close, timestamp }).catch(
+			(err) => console.error("Method orchestrator error:", err),
+		);
 	} catch (err) {
 		console.error("Failed to persist candle:", err);
 	}
