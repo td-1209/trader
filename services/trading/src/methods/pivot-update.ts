@@ -1,55 +1,57 @@
 import type { Candle, Method, Signal } from "./types.js";
-import { detectAllPoints, findLines } from "./line.js";
+import { findLines } from "./line.js";
 
 /**
- * pivot_update: 最高安値を更新した場合に、山谷からTP/SLを決定しエントリーする。
+ * pivot_update: 最近接の山/谷を終値が更新した場合にエントリーする。
+ * - 終値 > 最近接の山（レジスタンス） → long
+ * - 終値 < 最近接の谷（サポート）     → short
  */
 function execute(symbol: string, timeframe: string, candles: Candle[]): Signal | null {
 	if (candles.length < 5) return null;
 
 	const currentCandle = candles[candles.length - 1];
 	const previousCandles = candles.slice(0, -1);
-
-	// 1. 山・谷の検出
-	const { peaks, troughs } = detectAllPoints(previousCandles);
-	if (peaks.length === 0 || troughs.length === 0) return null;
-
-	const maxPeak = Math.max(...peaks);
-	const minTrough = Math.min(...troughs);
 	const closePrice = currentCandle.close;
 
-	// 2. 最高安値の更新判定
+	// 1. 山・谷の検出（クラスタリング済み）
+	const { upper, lower } = findLines(closePrice, previousCandles);
+
+	// 最近接の山・谷を取得
+	const nearestPeak = upper[0]; // 現在価格より上で最も近い山
+	const nearestTrough = lower[0]; // 現在価格より下で最も近い谷
+
+	if (!nearestPeak && !nearestTrough) return null;
+
+	// 2. 更新判定：前足の終値と比較して、今足で突破したか
+	const prevClose = previousCandles[previousCandles.length - 1]?.close;
+	if (prevClose == null) return null;
+
 	let direction: "long" | "short" | null = null;
-	if (closePrice > maxPeak) {
+
+	if (nearestPeak && prevClose <= nearestPeak.price && closePrice > nearestPeak.price) {
 		direction = "long";
-	} else if (closePrice < minTrough) {
+	} else if (nearestTrough && prevClose >= nearestTrough.price && closePrice < nearestTrough.price) {
 		direction = "short";
 	}
 
 	if (!direction) return null;
 
-	// 3. 利確/損切ラインの算出
-	const allPoints = [...peaks, ...troughs];
-	const abovePoints = allPoints.filter((p) => p > closePrice).sort((a, b) => a - b);
-	const belowPoints = allPoints.filter((p) => p < closePrice).sort((a, b) => b - a);
-
+	// 3. TP/SLの算出
 	let takeProfitPrice: number;
 	let stopLossPrice: number;
 
 	if (direction === "long") {
-		takeProfitPrice = abovePoints.length > 0
-			? abovePoints[0]
-			: closePrice + (closePrice - (belowPoints[0] ?? closePrice));
-		stopLossPrice = belowPoints.length > 0
-			? belowPoints[0]
-			: closePrice;
+		// TP: 次の山（2番目に近い山）、なければ突破した山からの等距離
+		takeProfitPrice = upper[1]?.price
+			?? closePrice + (closePrice - (lower[0]?.price ?? closePrice));
+		// SL: 最近接の谷
+		stopLossPrice = lower[0]?.price ?? closePrice;
 	} else {
-		takeProfitPrice = belowPoints.length > 0
-			? belowPoints[0]
-			: closePrice - ((abovePoints[0] ?? closePrice) - closePrice);
-		stopLossPrice = abovePoints.length > 0
-			? abovePoints[0]
-			: closePrice;
+		// TP: 次の谷（2番目に近い谷）、なければ突破した谷からの等距離
+		takeProfitPrice = lower[1]?.price
+			?? closePrice - ((upper[0]?.price ?? closePrice) - closePrice);
+		// SL: 最近接の山
+		stopLossPrice = upper[0]?.price ?? closePrice;
 	}
 
 	// 4. RRチェック
@@ -57,15 +59,12 @@ function execute(symbol: string, timeframe: string, candles: Candle[]): Signal |
 	const risk = Math.abs(closePrice - stopLossPrice);
 	if (risk === 0 || reward / risk <= 1.0) return null;
 
-	// 5. ライン情報（チャート描画用）
-	const { upper, lower } = findLines(closePrice, previousCandles);
-
 	return {
 		position: direction,
 		entryPrice: closePrice,
 		takeProfitPrice,
 		stopLossPrice,
-		reason: `${timeframe}足 最${direction === "long" ? "高" : "安"}値更新（RR: ${(reward / risk).toFixed(2)}）`,
+		reason: `${timeframe}足 ${direction === "long" ? "レジスタンス" : "サポート"}突破（RR: ${(reward / risk).toFixed(2)}）`,
 		upperLines: upper,
 		lowerLines: lower,
 	};
