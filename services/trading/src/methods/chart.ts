@@ -69,6 +69,26 @@ export async function renderChart(candles: Candle[], signal: Signal): Promise<Bu
 		ctx.fillText(formatPrice(price), PADDING.left + CHART_W + 5, y + 4);
 	}
 
+	// 時刻ラベル（X軸）
+	ctx.fillStyle = COLORS.text;
+	ctx.font = "10px monospace";
+	ctx.textAlign = "center";
+	const timeStep = Math.max(1, Math.floor(candles.length / 8));
+	for (let i = 0; i < candles.length; i += timeStep) {
+		const x = toX(i);
+		const d = new Date(candles[i].timestamp);
+		const label = `${String(d.getUTCMonth() + 1).padStart(2, "0")}/${String(d.getUTCDate()).padStart(2, "0")} ${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
+		ctx.fillText(label, x, HEIGHT - 5);
+
+		// 縦グリッド
+		ctx.strokeStyle = COLORS.grid;
+		ctx.lineWidth = 0.5;
+		ctx.beginPath();
+		ctx.moveTo(x, PADDING.top);
+		ctx.lineTo(x, PADDING.top + CHART_H);
+		ctx.stroke();
+	}
+
 	// ローソク足
 	for (let i = 0; i < candles.length; i++) {
 		const c = candles[i];
