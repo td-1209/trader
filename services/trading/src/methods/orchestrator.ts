@@ -83,37 +83,55 @@ async function executeMethod(
 	if (candles.length < 5) return;
 
 	const signal = impl.execute(symbol, timeframe, candles);
+
+	if (method.mode === "notify") {
+		// notifyモード: シグナルの有無に関わらずチャート画像を送信
+		await notifySignal(method, symbol, timeframe, signal, candles);
+		return;
+	}
+
 	if (!signal) return;
 
 	console.log(`Signal: ${method.name} ${symbol} ${timeframe} → ${signal.position} @ ${signal.entryPrice} (mode: ${method.mode})`);
-
-	if (method.mode === "live") {
-		await placeSignalOrder(method, symbol, signal);
-	} else {
-		await notifySignal(method, symbol, timeframe, signal, candles);
-	}
+	await placeSignalOrder(method, symbol, signal);
 }
 
 async function notifySignal(
 	method: { id: string; name: string },
 	symbol: string,
 	timeframe: string,
-	signal: Signal,
+	signal: Signal | null,
 	candles: Awaited<ReturnType<typeof fetchCandles>>,
 ) {
-	const reward = Math.abs(signal.entryPrice - signal.takeProfitPrice);
-	const risk = Math.abs(signal.entryPrice - signal.stopLossPrice);
-	const rr = risk > 0 ? (reward / risk).toFixed(2) : "N/A";
+	// シグナルなしの場合はline情報だけでチャート生成
+	const { findLines } = await import("./line.js");
+	const lastPrice = candles[candles.length - 1]?.close ?? 0;
+	const defaultSignal: Signal = signal ?? {
+		position: "long",
+		entryPrice: lastPrice,
+		takeProfitPrice: lastPrice,
+		stopLossPrice: lastPrice,
+		reason: "シグナルなし",
+		...(() => { const l = findLines(lastPrice, candles); return { upperLines: l.upper, lowerLines: l.lower }; })(),
+	};
 
-	const content = [
-		`🤖 シグナル検出: ${method.name}`,
-		`${symbol} ${timeframe}足 → ${signal.position} @ ${formatPrice(signal.entryPrice)}`,
-		`TP: ${formatPrice(signal.takeProfitPrice)} / SL: ${formatPrice(signal.stopLossPrice)} (RR: ${rr})`,
-		signal.reason,
-	].join("\n");
+	let content: string;
+	if (signal) {
+		const reward = Math.abs(signal.entryPrice - signal.takeProfitPrice);
+		const risk = Math.abs(signal.entryPrice - signal.stopLossPrice);
+		const rr = risk > 0 ? (reward / risk).toFixed(2) : "N/A";
+		content = [
+			`🤖 シグナル検出: ${method.name}`,
+			`${symbol} ${timeframe}足 → ${signal.position} @ ${formatPrice(signal.entryPrice)}`,
+			`TP: ${formatPrice(signal.takeProfitPrice)} / SL: ${formatPrice(signal.stopLossPrice)} (RR: ${rr})`,
+			signal.reason,
+		].join("\n");
+	} else {
+		content = `📊 ${method.name} ${symbol} ${timeframe}足 — シグナルなし（現在値: ${formatPrice(lastPrice)}）`;
+	}
 
 	try {
-		const image = await renderChart(candles, signal);
+		const image = await renderChart(candles, defaultSignal);
 		await sendDiscordNotification({ content, channel: "trade", image });
 	} catch (err) {
 		console.error("Chart render failed, sending without image:", err);
