@@ -70,16 +70,16 @@ export function findLines(currentPrice: number, candles: Candle[]): { upper: Lin
 	const priceRange = Math.max(...candles.map((c) => c.high)) - Math.min(...candles.map((c) => c.low));
 	const clusterThreshold = priceRange * 0.04;
 
-	// 上: 現在価格より上の山（レジスタンス）、現在価格に近すぎるものを除外 → クラスタリング
+	// 上: 現在価格より上の山（レジスタンス）→ クラスタリング
 	const upperRaw = points
-		.filter((p) => p.type === "peak" && p.price > currentPrice + clusterThreshold)
+		.filter((p) => p.type === "peak" && p.price > currentPrice)
 		.sort((a, b) => a.price - b.price);
 	const upper = clusterLines(upperRaw, clusterThreshold, "peak")
 		.map(({ price, type }) => ({ price, type }));
 
-	// 下: 現在価格より下の谷（サポート）、現在価格に近すぎるものを除外 → クラスタリング
+	// 下: 現在価格より下の谷（サポート）→ クラスタリング
 	const lowerRaw = points
-		.filter((p) => p.type === "trough" && p.price < currentPrice - clusterThreshold)
+		.filter((p) => p.type === "trough" && p.price < currentPrice)
 		.sort((a, b) => b.price - a.price);
 	const lower = clusterLines(lowerRaw, clusterThreshold, "trough")
 		.map(({ price, type }) => ({ price, type }));
