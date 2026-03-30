@@ -116,7 +116,7 @@ export function startJobs() {
 	// 定期実行（cron式）
 	cron.schedule("*/5 * * * *", newsJob);        // 5分ごと: ニュース取得
 	cron.schedule("0 * * * *", calendarJob);       // 毎時0分: 経済カレンダー
-	cron.schedule("5 * * * *", sentimentJob);      // 毎時5分: センチメント（ニュース取得の後）
+	cron.schedule("5 9 * * *", sentimentJob);       // 毎日9:05 UTC: センチメント
 
 	console.log("Research jobs started (node-cron)");
 }
