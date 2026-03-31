@@ -19,6 +19,7 @@ export interface Signal {
 	reason: string;
 	upperLines: Line[];
 	lowerLines: Line[];
+	rrRejected?: boolean;
 }
 
 export interface Method {

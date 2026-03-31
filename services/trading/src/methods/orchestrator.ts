@@ -86,7 +86,7 @@ async function executeMethod(
 		return;
 	}
 
-	if (!signal) return;
+	if (!signal || signal.rrRejected) return;
 
 	console.log(`Signal: ${method.name} ${symbol} ${timeframe} → ${signal.position} @ ${signal.entryPrice} (mode: ${method.mode})`);
 	await placeSignalOrder(method, symbol, signal);
@@ -111,7 +111,17 @@ async function notifySignal(
 	};
 
 	let content: string;
-	if (signal) {
+	if (signal?.rrRejected) {
+		const reward = Math.abs(signal.entryPrice - signal.takeProfitPrice);
+		const risk = Math.abs(signal.entryPrice - signal.stopLossPrice);
+		const rr = risk > 0 ? (reward / risk).toFixed(2) : "N/A";
+		content = [
+			`⚠️ RR不足で見送り: ${method.name}`,
+			`${symbol} ${timeframe}足 → ${signal.position} @ ${formatPrice(signal.entryPrice)}`,
+			`TP: ${formatPrice(signal.takeProfitPrice)} / SL: ${formatPrice(signal.stopLossPrice)} (RR: ${rr})`,
+			signal.reason,
+		].join("\n");
+	} else if (signal) {
 		const reward = Math.abs(signal.entryPrice - signal.takeProfitPrice);
 		const risk = Math.abs(signal.entryPrice - signal.stopLossPrice);
 		const rr = risk > 0 ? (reward / risk).toFixed(2) : "N/A";

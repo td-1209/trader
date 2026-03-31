@@ -85,27 +85,42 @@ function deduplicateNearby(points: Point[]): Point[] {
 /**
  * 現在価格から上下それぞれ最も近い山・谷を3本ずつ返す。
  */
-export function findLines(currentPrice: number, candles: Candle[]): { upper: Line[]; lower: Line[] } {
+interface FindLinesResult {
+	upper: Line[];
+	lower: Line[];
+	rawUpper: Line[];
+	rawLower: Line[];
+}
+
+export function findLines(currentPrice: number, candles: Candle[]): FindLinesResult {
 	const points = detectPoints(candles);
 
+	// 生ポイント（重複除去・クラスタリング前）— 突破判定用
+	const rawUpper = points
+		.filter((p) => p.type === "peak" && p.price > currentPrice)
+		.sort((a, b) => a.price - b.price)
+		.map(({ price, type }) => ({ price, type }));
+
+	const rawLower = points
+		.filter((p) => p.type === "trough" && p.price < currentPrice)
+		.sort((a, b) => b.price - a.price)
+		.map(({ price, type }) => ({ price, type }));
+
+	// クラスタリング済み — チャート描画用
 	const priceRange = Math.max(...candles.map((c) => c.high)) - Math.min(...candles.map((c) => c.low));
 	const clusterThreshold = priceRange * 0.04;
 
-	// 上: 現在価格より上の山（レジスタンス）→ クラスタリング
-	const upperRaw = points
-		.filter((p) => p.type === "peak" && p.price > currentPrice)
-		.sort((a, b) => a.price - b.price);
-	const upper = clusterLines(upperRaw, clusterThreshold, "peak")
-		.map(({ price, type }) => ({ price, type }));
+	const upper = clusterLines(
+		points.filter((p) => p.type === "peak" && p.price > currentPrice).sort((a, b) => a.price - b.price),
+		clusterThreshold, "peak",
+	).map(({ price, type }) => ({ price, type }));
 
-	// 下: 現在価格より下の谷（サポート）→ クラスタリング
-	const lowerRaw = points
-		.filter((p) => p.type === "trough" && p.price < currentPrice)
-		.sort((a, b) => b.price - a.price);
-	const lower = clusterLines(lowerRaw, clusterThreshold, "trough")
-		.map(({ price, type }) => ({ price, type }));
+	const lower = clusterLines(
+		points.filter((p) => p.type === "trough" && p.price < currentPrice).sort((a, b) => b.price - a.price),
+		clusterThreshold, "trough",
+	).map(({ price, type }) => ({ price, type }));
 
-	return { upper, lower };
+	return { upper, lower, rawUpper, rawLower };
 }
 
 /**
