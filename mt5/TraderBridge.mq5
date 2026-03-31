@@ -32,6 +32,7 @@ void OnDeinit(const int reason)
 void OnTimer()
 {
    PollCommands();
+   SyncPositions();
 }
 
 //+------------------------------------------------------------------+
@@ -110,6 +111,9 @@ string HandleOrder(string json)
    if(price == 0)
       return "{\"success\":false,\"error\":\"Symbol not found: " + symbol + "\"}";
 
+   double tp = JsonGetDouble(json, "tp");
+   double sl = JsonGetDouble(json, "sl");
+
    MqlTradeRequest request = {};
    MqlTradeResult  result  = {};
 
@@ -122,6 +126,8 @@ string HandleOrder(string json)
    request.magic        = 123456;
    request.comment      = "TraderBridge";
    request.type_filling = ORDER_FILLING_IOC;
+   if(tp > 0) request.tp = tp;
+   if(sl > 0) request.sl = sl;
 
    if(!OrderSend(request, result))
       return "{\"success\":false,\"error\":\"OrderSend failed: " + IntegerToString(result.retcode) + " " + result.comment + "\"}";

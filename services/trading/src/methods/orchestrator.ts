@@ -150,14 +150,19 @@ async function placeSignalOrder(
 	signal: Signal,
 ) {
 	const volume = 0.01;
+	const tp = signal.useLimit ? signal.takeProfitPrice : undefined;
+	const sl = signal.useLimit ? signal.stopLossPrice : undefined;
 
 	try {
-		const result = await mt5Bridge.placeOrder(symbol, signal.position, volume);
+		const result = await mt5Bridge.placeOrder(symbol, signal.position, volume, tp, sl);
 
 		if (!result.success) {
 			console.error(`Order failed: ${result.error}`);
 			return;
 		}
+
+		const executionPrice = result.price ? Number(result.price) : signal.entryPrice;
+		const slippage = executionPrice - signal.entryPrice;
 
 		await db.insert(trades).values({
 			method: method.id,
@@ -166,7 +171,9 @@ async function placeSignalOrder(
 			position: signal.position,
 			status: "open",
 			exposure: String(volume * 100000),
-			entryPrice: result.price ?? String(signal.entryPrice),
+			entryPrice: String(executionPrice),
+			signalPrice: String(signal.entryPrice),
+			slippage: String(slippage),
 			takeProfitPrice: String(signal.takeProfitPrice),
 			stopLossPrice: String(signal.stopLossPrice),
 			isDemo: false,
@@ -176,8 +183,9 @@ async function placeSignalOrder(
 			entryAt: new Date(),
 		});
 
+		const slippageStr = slippage !== 0 ? ` (slip: ${slippage > 0 ? "+" : ""}${formatPrice(slippage)})` : "";
 		sendDiscordNotification({
-			content: `🤖 自動注文: ${method.name}\n${symbol} ${signal.position} @ ${result.price ?? signal.entryPrice}\nTP: ${signal.takeProfitPrice} / SL: ${signal.stopLossPrice}\n${signal.reason}`,
+			content: `🤖 自動注文: ${method.name}\n${symbol} ${signal.position} @ ${formatPrice(executionPrice)}${slippageStr}\nTP: ${formatPrice(signal.takeProfitPrice)} / SL: ${formatPrice(signal.stopLossPrice)}${signal.useLimit ? " [指値]" : ""}\n${signal.reason}`,
 			channel: "trade",
 		});
 	} catch (err) {

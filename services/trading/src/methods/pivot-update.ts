@@ -62,6 +62,7 @@ function execute(symbol: string, timeframe: string, candles: Candle[]): Signal |
 		upperLines: upper,
 		lowerLines: lower,
 		rrRejected,
+		useLimit: true,
 	};
 }
 

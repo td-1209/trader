@@ -47,6 +47,8 @@ export const trades = trading.table(
 		profitLoss: decimal("profit_loss", { precision: 20, scale: 8 }),
 		isDemo: boolean("is_demo").notNull().default(false),
 		isManual: boolean("is_manual").notNull().default(true),
+		signalPrice: decimal("signal_price", { precision: 20, scale: 8 }),
+		slippage: decimal({ precision: 20, scale: 8 }),
 		brokerOrder: text("broker_order"),
 		reasonDescription: text("reason_description"),
 		resultDescription: text("result_description"),

@@ -20,6 +20,7 @@ export interface Signal {
 	upperLines: Line[];
 	lowerLines: Line[];
 	rrRejected?: boolean;
+	useLimit: boolean; // MT5にTP/SL指値を設定するか
 }
 
 export interface Method {
