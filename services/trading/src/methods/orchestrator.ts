@@ -82,7 +82,7 @@ async function executeMethod(
 	const signal = impl.execute(symbol, timeframe, candles);
 
 	if (method.mode === "notify") {
-		await notifySignal(method, symbol, timeframe, signal, candles);
+		if (signal) await notifySignal(method, symbol, timeframe, signal, candles);
 		return;
 	}
 
