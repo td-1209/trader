@@ -107,6 +107,7 @@ async function notifySignal(
 		takeProfitPrice: lastPrice,
 		stopLossPrice: lastPrice,
 		reason: "シグナルなし",
+		useLimit: false,
 		...(() => { const l = findLines(lastPrice, candles.slice(0, -1)); return { upperLines: l.upper, lowerLines: l.lower }; })(),
 	};
 
