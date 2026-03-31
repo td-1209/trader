@@ -8,7 +8,22 @@ let ws: WebSocket | null = null;
 let reconnectAttempt = 0;
 const MAX_RECONNECT_DELAY = 60_000;
 
-const SYMBOLS = ["usdjpy", "eurusd", "gbpusd", "eurjpy", "xauusd"];
+const SYMBOLS = [
+	// /JPY
+	"usdjpy", "eurjpy", "gbpjpy", "audjpy", "nzdjpy", "cadjpy", "chfjpy",
+	// /USD
+	"eurusd", "gbpusd", "audusd", "nzdusd", "xauusd",
+	// /CAD
+	"usdcad", "eurcad", "gbpcad", "audcad", "nzdcad",
+	// /CHF
+	"usdchf", "eurchf", "gbpchf", "audchf", "cadchf", "nzdchf",
+	// /GBP
+	"eurgbp",
+	// /AUD
+	"gbpaud", "euraud",
+	// /NZD
+	"gbpnzd", "eurnzd", "audnzd",
+];
 
 interface TiingoQuote {
 	symbol: string;
