@@ -81,12 +81,12 @@ async function executeMethod(
 
 	const signal = impl.execute(symbol, timeframe, candles);
 
+	if (!signal || signal.rrRejected) return;
+
 	if (method.mode === "notify") {
-		if (signal) await notifySignal(method, symbol, timeframe, signal, candles);
+		await notifySignal(method, symbol, timeframe, signal, candles);
 		return;
 	}
-
-	if (!signal || signal.rrRejected) return;
 
 	console.log(`Signal: ${method.name} ${symbol} ${timeframe} → ${signal.position} @ ${signal.entryPrice} (mode: ${method.mode})`);
 	await placeSignalOrder(method, symbol, signal);
@@ -96,48 +96,21 @@ async function notifySignal(
 	method: { id: string; name: string },
 	symbol: string,
 	timeframe: string,
-	signal: Signal | null,
+	signal: Signal,
 	candles: Awaited<ReturnType<typeof fetchCandles>>,
 ) {
-	const { findLines } = await import("./line.js");
-	const lastPrice = candles[candles.length - 1]?.close ?? 0;
-	const chartSignal: Signal = signal ?? {
-		position: "long",
-		entryPrice: lastPrice,
-		takeProfitPrice: lastPrice,
-		stopLossPrice: lastPrice,
-		reason: "シグナルなし",
-		useLimit: false,
-		...(() => { const l = findLines(lastPrice, candles.slice(0, -1)); return { upperLines: l.upper, lowerLines: l.lower }; })(),
-	};
-
-	let content: string;
-	if (signal?.rrRejected) {
-		const reward = Math.abs(signal.entryPrice - signal.takeProfitPrice);
-		const risk = Math.abs(signal.entryPrice - signal.stopLossPrice);
-		const rr = risk > 0 ? (reward / risk).toFixed(2) : "N/A";
-		content = [
-			`⚠️ RR不足で見送り: ${method.name}`,
-			`${symbol} ${timeframe}足 → ${signal.position} @ ${formatPrice(signal.entryPrice)}`,
-			`TP: ${formatPrice(signal.takeProfitPrice)} / SL: ${formatPrice(signal.stopLossPrice)} (RR: ${rr})`,
-			signal.reason,
-		].join("\n");
-	} else if (signal) {
-		const reward = Math.abs(signal.entryPrice - signal.takeProfitPrice);
-		const risk = Math.abs(signal.entryPrice - signal.stopLossPrice);
-		const rr = risk > 0 ? (reward / risk).toFixed(2) : "N/A";
-		content = [
-			`🤖 シグナル検出: ${method.name}`,
-			`${symbol} ${timeframe}足 → ${signal.position} @ ${formatPrice(signal.entryPrice)}`,
-			`TP: ${formatPrice(signal.takeProfitPrice)} / SL: ${formatPrice(signal.stopLossPrice)} (RR: ${rr})`,
-			signal.reason,
-		].join("\n");
-	} else {
-		content = `📊 ${method.name} ${symbol} ${timeframe}足（現在値: ${formatPrice(lastPrice)}）`;
-	}
+	const reward = Math.abs(signal.entryPrice - signal.takeProfitPrice);
+	const risk = Math.abs(signal.entryPrice - signal.stopLossPrice);
+	const rr = risk > 0 ? (reward / risk).toFixed(2) : "N/A";
+	const content = [
+		`🤖 シグナル検出: ${method.name}`,
+		`${symbol} ${timeframe}足 → ${signal.position} @ ${formatPrice(signal.entryPrice)}`,
+		`TP: ${formatPrice(signal.takeProfitPrice)} / SL: ${formatPrice(signal.stopLossPrice)} (RR: ${rr})`,
+		signal.reason,
+	].join("\n");
 
 	try {
-		const image = await renderChart(candles, chartSignal);
+		const image = await renderChart(candles, signal);
 		await sendDiscordNotification({ content, channel: "trade", image });
 	} catch (err) {
 		console.error("Chart render failed, sending without image:", err);
