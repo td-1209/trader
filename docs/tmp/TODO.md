@@ -1,5 +1,32 @@
 # TODO
 
+## 戦略
+
+### 状況
+
+- Phase4まで完了
+- 価格取得は安定稼働中
+- 注文決済も稼働確認
+- 市場調査も稼働確認（指標情報のみ取得困難）
+- 速報分析は実装済み（現状急変してないので無風）
+- 定期分析は実装済み（取引実績不足で未動作）
+- 戦略立案は実装済み（手動トリガー）
+
+### 未実装
+
+- フロントエンド
+- 取引ロジック
+
+### 検討
+
+#### 手動取引について
+
+特に検討事項なし？ただ取引口座のスイッチ処理は必要か。
+
+#### デモによる成績評価の運用について
+
+過去1年くらいの取引データをDBに置いておき、定義された手法のデモトレードを行い、その取引結果をis_demo=trueとしてDBに記録して分析対象にする。
+
 ## 見通し
 
 ### Phase 1: 基盤
@@ -142,24 +169,64 @@
 - [x] REST API: 損益サマリ（GET /stats/pnl, /stats/balance: 期間別、手法別、ドメイン別）
 - [x] 画像アップロード（POST /trades/:id/images: 5MB制限、png/jpeg/webp）
 
-#### 2-3. 注文執行（MT5 ZeroMQブリッジ）
+#### 2-3. 注文執行（MT5 HTTPブリッジ）
 
-- [x] XMTrading API調査 → 独自APIなし、Windows VPS上のMT5 + ZeroMQブリッジ方式に決定
-- [ ] MT5 EA開発: ZeroMQサーバー（MQL5 + ZeroMQ DLL）
-- [ ] MT5 EA開発: 注文受信→成行発注→結果返却
-- [ ] MT5 EA開発: 決済受信→ポジション決済→結果返却
-- [ ] MT5 EA開発: ポジション照会→応答
-- [ ] trading service: ZeroMQクライアント実装（zeromq.js）
-- [ ] trading service: MT5ブリッジ接続管理（切断検知・再接続・ヘルスチェック）
-- [ ] 成行注文発注（POST /trades: symbol, position, exposure）
-- [ ] 約定結果のtrading.tradesへの記録（status=open）
-- [ ] 決済処理（PATCH /trades/:id/close）→ status=exited, exit_price, profit_loss計算
-- [ ] 損切り自動執行（stop_loss_price到達時）
-- [ ] 利確自動執行（take_profit_price到達時）
-- [ ] 約定・損切り時のDiscord通知（packages/notify経由）
-- [ ] オープンポジションのインメモリキャッシュ管理
+- [x] XMTrading API調査 → 独自APIなし、MT5 EA + HTTPポーリング方式に決定
+- [x] MT5 EA開発: HTTPポーリングでコマンド取得・結果返送
+- [x] MT5 EA開発: 注文受信→成行発注→結果返却
+- [x] MT5 EA開発: 決済受信→ポジション決済→結果返却
+- [x] MT5 EA開発: ポジション同期
+- [x] trading service: ブリッジエンドポイント実装（/bridge/commands, /bridge/results, /bridge/sync）
+- [x] MT5にEA配置・コンパイル・起動確認
+- [x] 成行注文発注（POST /trades: symbol, position, exposure）→ ブリッジ経由でMT5に送信
+- [x] 約定結果のtrading.tradesへの記録（status=open）
+- [x] 決済処理（PATCH /trades/:id）→ ブリッジ経由で決済、status=exited, exit_price, profit_loss計算
+- [x] 損切り自動執行（stop_loss_price到達時、Tiingoティックで監視）
+- [x] 利確自動執行（take_profit_price到達時、Tiingoティックで監視）
+- [x] 約定・決済・損切り・利確時のDiscord通知（packages/notify経由、tradeチャンネル）
+- [x] オープンポジションのインメモリキャッシュ管理（起動時DBからロード）
 
-### Pahse N: その他
+### Phase 3: research
+
+#### 3-1. Finnhubデータ取得
+
+- [x] Finnhub APIクライアント（レート制限ガード: 60req/min）
+- [x] ニュース取得ジョブ（5分間隔、research.newsにINSERT、重複除外）
+- [x] 経済カレンダー取得ジョブ（60分間隔、research.calendarsにUPSERT）
+- [x] REST API: ニュース一覧（GET /news: symbol, category, limitフィルタ）
+- [x] REST API: 経済カレンダー一覧（GET /calendars: country, impact, from, toフィルタ）
+
+#### 3-2. センチメント分析
+
+- [x] Claudeセンチメント分析クライアント（claude-haiku-4-5、ニュースからscore/label/summary生成）
+- [x] センチメント分析ジョブ（60分間隔、対象: USDJPY, EURUSD, XAUUSD）
+- [x] REST API: センチメント一覧（GET /sentiments）
+- [x] REST API: 最新センチメント（GET /sentiments/latest: target指定）
+
+### Phase 4: analysis
+
+#### 4-1. 改善提案
+
+- [x] サービス間HTTPクライアント（trading/researchへの内部通信）
+- [x] Claude改善提案エンジン（claude-sonnet、取引履歴からアンチパターン検出・改善提案）
+- [x] 分析オーケストレーター（データ収集→Claude→DB保存→Discord通知の共通ロジック）
+- [x] REST API: 分析一覧（GET /analyses: type, symbol, limitフィルタ）
+- [x] REST API: 分析詳細（GET /analyses/:id）
+- [x] REST API: 分析手動トリガー（POST /analyses: 202で即返し、バックグラウンド実行）
+- [x] 改善提案ジョブ（毎週月曜9時、直近の取引データから生成）
+
+#### 4-2. 速報分析
+
+- [x] Claude速報分析エンジン（シナリオ分析: bull/bear/base）
+- [x] 速報分析ジョブ（4時間間隔、1%以上の価格急変検出時にflash_report生成→Discord市場チャンネル通知）
+
+#### 4-3. 戦略立案
+
+- [x] Claude戦略立案エンジン（エントリーポイント・TP/SL提案）
+- [x] REST API: 戦略一覧（GET /strategies: symbol, activeフィルタ）
+- [x] REST API: 戦略詳細（GET /strategies/:id）
+
+### Phase N: その他
 
 #### データ移行
 
