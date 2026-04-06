@@ -6,6 +6,7 @@ import { candlesRoutes } from "./routes/candles.js";
 import { statsRoutes } from "./routes/stats.js";
 import { imagesRoutes } from "./routes/images.js";
 import { bridgeRoutes } from "./broker/mt5-bridge.js";
+import { backtestRoutes } from "./backtest/routes.js";
 
 const app = new Hono();
 
@@ -17,6 +18,7 @@ app.route("/cashflows", cashflowsRoutes);
 app.route("/methods", methodsRoutes);
 app.route("/candles", candlesRoutes);
 app.route("/stats", statsRoutes);
+app.route("/backtest", backtestRoutes);
 app.route("/", bridgeRoutes);
 
 export { app };

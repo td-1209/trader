@@ -2,6 +2,7 @@ import {
 	boolean,
 	decimal,
 	index,
+	integer,
 	jsonb,
 	pgSchema,
 	text,
@@ -98,4 +99,22 @@ export const candles = trading.table(
 		unique("uq_candles_symbol_tf_ts").on(t.symbol, t.timeframe, t.timestamp),
 		index("idx_candles_symbol_tf_ts").on(t.symbol, t.timeframe, t.timestamp),
 	],
+);
+
+export const backtestResults = trading.table(
+	"backtest_results",
+	{
+		id: uuid().primaryKey().default(sql`gen_random_uuid()`),
+		methodName: text("method_name").notNull(),
+		symbol: text().notNull(),
+		timeframe: text().notNull(),
+		totalTrades: integer("total_trades").notNull(),
+		winRate: decimal("win_rate", { precision: 5, scale: 2 }),
+		profitFactor: decimal("profit_factor", { precision: 10, scale: 4 }),
+		maxDrawdown: decimal("max_drawdown", { precision: 20, scale: 8 }),
+		totalProfitLoss: decimal("total_profit_loss", { precision: 20, scale: 8 }),
+		groupAnalysis: jsonb("group_analysis").notNull().default({}),
+		summary: text(),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+	},
 );
