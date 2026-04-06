@@ -5,7 +5,7 @@ const API_BASE = "https://api.tiingo.com/tiingo/fx";
 const API_KEY = process.env.TIINGO_API_KEY;
 const SYMBOL = "usdjpy";
 const TIMEFRAME = "5m";
-const RATE_LIMIT_DELAY = 75_000; // 75秒（50req/時 = 72秒/req + マージン）
+const RATE_LIMIT_DELAY = 90_000; // 90秒（50req/時 = 72秒/req + 十分なマージン）
 
 interface TiingoCandle {
 	date: string;
