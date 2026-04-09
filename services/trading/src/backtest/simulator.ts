@@ -51,18 +51,19 @@ export function simulate(trades: BacktestTrade[], config: SimulationConfig): Sim
 		// pipValue for JPY pairs = 100 * pipSize (for 0.01 lot = 1000通貨)
 		const lotSize = maxLossAmount / (riskPips * config.pipSize * 100000);
 
-		// コスト計算
+		// --- 過剰評価抑制: 本番で発生するコストをシミュレーションに反映 ---
+		// スプレッド: 買値と売値の差。エントリー時点でスプレッド分だけ不利に約定する
 		const spreadCost = config.spreadPips * config.pipSize * lotSize * 100000;
+		// スリッページ: 注文価格と実際の約定価格の差。流動性不足や急変時に発生
 		const slippageCost = config.slippagePips * config.pipSize * lotSize * 100000;
-
-		// スワップ計算（保有日数）
+		// スワップ: 日をまたいで保有した際の金利差コスト。long/shortで異なる
 		const entryTime = new Date(trade.entryAt).getTime();
 		const exitTime = new Date(trade.exitAt).getTime();
 		const holdingDays = Math.max(0, (exitTime - entryTime) / (24 * 60 * 60 * 1000));
 		const swapRate = trade.position === "long" ? config.swapPerDayLong : config.swapPerDayShort;
 		const swapCost = swapRate * config.pipSize * lotSize * 100000 * holdingDays;
+		// --- 過剰評価抑制ここまで ---
 
-		// 損益計算（pips → 円）
 		const rawPnlPips = trade.profitLoss / config.pipSize;
 		const rawPnl = rawPnlPips * config.pipSize * lotSize * 100000;
 
@@ -79,8 +80,8 @@ export function simulate(trades: BacktestTrade[], config: SimulationConfig): Sim
 		// 残高更新
 		balance += netPnl;
 
-		// ゼロカット判定
-		if (balance <= 0) {
+		// ゼロカット判定: 残高が投入額の1%を切ったら再投入
+		if (balance < config.topUpAmount * 0.01) {
 			balance = config.topUpAmount;
 			totalTopUp += config.topUpAmount;
 			zeroCutCount++;

@@ -105,6 +105,7 @@ function runMethodBacktest(
 	const windowSize = LOOKBACK[config.timeframe] ?? 144;
 	const completedTrades: BacktestTrade[] = [];
 	let openTrade: Omit<BacktestTrade, "exitPrice" | "profitLoss" | "exitAt" | "exitReason"> | null = null;
+	let pendingSignal: import("../methods/types.js").Signal | null = null;
 
 	for (let i = windowSize; i < allCandles.length; i++) {
 		const window = allCandles.slice(i - windowSize, i + 1);
@@ -120,21 +121,29 @@ function runMethodBacktest(
 		}
 
 		// オープンポジションがなければ新規シグナル判定
-		if (!openTrade) {
+		if (!openTrade && !pendingSignal) {
 			const signal = impl.execute(config.symbol, config.timeframe, window);
 			if (signal && !signal.rrRejected) {
-				openTrade = {
-					methodName,
-					symbol: config.symbol,
-					position: signal.position,
-					entryPrice: signal.entryPrice,
-					signalPrice: signal.entryPrice,
-					takeProfitPrice: signal.takeProfitPrice,
-					stopLossPrice: signal.stopLossPrice,
-					reason: signal.reason,
-					entryAt: currentCandle.timestamp,
-				};
+				// 過剰評価抑制: 約定遅延 — シグナル足の終値ではなく次の足の始値でエントリー
+				// 実際の取引ではシグナル検出から注文約定まで時間差がある
+				pendingSignal = signal;
 			}
+		}
+
+		// 約定遅延: 前の足でシグナルが出ていたら、この足の始値でエントリー
+		if (pendingSignal && !openTrade) {
+			openTrade = {
+				methodName,
+				symbol: config.symbol,
+				position: pendingSignal.position,
+				entryPrice: currentCandle.open, // 次の足の始値でエントリー
+				signalPrice: pendingSignal.entryPrice,
+				takeProfitPrice: pendingSignal.takeProfitPrice,
+				stopLossPrice: pendingSignal.stopLossPrice,
+				reason: pendingSignal.reason,
+				entryAt: currentCandle.timestamp,
+			};
+			pendingSignal = null;
 		}
 	}
 
@@ -162,6 +171,7 @@ function checkExit(
 	trade: { position: string; entryPrice: number; takeProfitPrice: number; stopLossPrice: number; methodName: string; symbol: string; signalPrice: number; reason: string; entryAt: string },
 	candle: Candle,
 ): BacktestTrade | null {
+	// 悲観処理: 同一足でTP/SLの両方に触れた場合、SLを優先する（過剰評価を抑制）
 	if (trade.position === "long") {
 		if (candle.low <= trade.stopLossPrice) {
 			return { ...trade, exitPrice: trade.stopLossPrice, exitAt: candle.timestamp, exitReason: "stop_loss", profitLoss: calcProfitLoss("long", trade.entryPrice, trade.stopLossPrice) };
