@@ -41,11 +41,16 @@ app.post("/bridge/results", async (c) => {
 	const result = (await c.req.json()) as BridgeResult;
 
 	if (!result.success) {
-		console.error(`MT5 bridge error: ${result.error} (command: ${result.commandId})`);
-		sendDiscordNotification({
-			content: `⚠️ MT5注文エラー: ${result.error}`,
-			channel: "alert",
-		});
+		// Invalid stops (10016) はTP/SLが近すぎるだけなので黙ってスキップ
+		if (result.error?.includes("10016")) {
+			console.log(`MT5 bridge skipped (invalid stops): ${result.error} (command: ${result.commandId})`);
+		} else {
+			console.error(`MT5 bridge error: ${result.error} (command: ${result.commandId})`);
+			sendDiscordNotification({
+				content: `⚠️ MT5注文エラー: ${result.error}`,
+				channel: "alert",
+			});
+		}
 	}
 
 	const callback = resultCallbacks.get(result.commandId);
