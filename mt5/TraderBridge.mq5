@@ -135,7 +135,8 @@ string HandleOrder(string json)
    if(result.retcode != TRADE_RETCODE_DONE)
       return "{\"success\":false,\"error\":\"Rejected: " + IntegerToString(result.retcode) + " " + result.comment + "\"}";
 
-   return "{\"success\":true,\"ticket\":\"" + IntegerToString(result.deal) +
+   // result.orderをbrokerOrderとして返す（決済履歴のpositionIdと一致する）
+   return "{\"success\":true,\"ticket\":\"" + IntegerToString(result.order) +
           "\",\"price\":\"" + DoubleToString(result.price, 8) + "\"}";
 }
 
