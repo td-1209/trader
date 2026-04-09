@@ -49,7 +49,7 @@ function execute(symbol: string, timeframe: string, candles: Candle[]): Signal |
 	const reward = Math.abs(closePrice - takeProfitPrice);
 	const risk = Math.abs(closePrice - stopLossPrice);
 	const rr = risk > 0 ? reward / risk : 0;
-	const rrRejected = risk === 0 || rr <= 1.0;
+	const rrRejected = risk === 0 || rr <= 2.0;
 
 	return {
 		position: direction,
