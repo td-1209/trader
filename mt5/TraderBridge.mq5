@@ -211,6 +211,41 @@ void SyncPositions()
               ",\"openPrice\":\"" + DoubleToString(openPrice, 8) +
               "\",\"profit\":\"" + DoubleToString(profit, 2) + "\"}";
    }
+   json += "],\"closedDeals\":[";
+
+   // 全期間の決済履歴を取得
+   datetime from = 0;
+   datetime to = TimeCurrent();
+   HistorySelect(from, to);
+
+   int deals = HistoryDealsTotal();
+   bool firstDeal = true;
+   for(int d = 0; d < deals; d++)
+   {
+      ulong dealTicket = HistoryDealGetTicket(d);
+      if(dealTicket == 0) continue;
+      if(HistoryDealGetInteger(dealTicket, DEAL_MAGIC) != 123456) continue;
+      // 決済（OUT）のみ
+      long dealEntry = HistoryDealGetInteger(dealTicket, DEAL_ENTRY);
+      if(dealEntry != DEAL_ENTRY_OUT) continue;
+
+      string dealSymbol = HistoryDealGetString(dealTicket, DEAL_SYMBOL);
+      double dealPrice  = HistoryDealGetDouble(dealTicket, DEAL_PRICE);
+      double dealProfit = HistoryDealGetDouble(dealTicket, DEAL_PROFIT);
+      double dealVolume = HistoryDealGetDouble(dealTicket, DEAL_VOLUME);
+      long dealTime     = (long)HistoryDealGetInteger(dealTicket, DEAL_TIME);
+      long positionId   = (long)HistoryDealGetInteger(dealTicket, DEAL_POSITION_ID);
+
+      if(!firstDeal) json += ",";
+      firstDeal = false;
+      json += "{\"ticket\":\"" + IntegerToString(dealTicket) +
+              "\",\"positionId\":\"" + IntegerToString(positionId) +
+              "\",\"symbol\":\"" + dealSymbol +
+              "\",\"price\":\"" + DoubleToString(dealPrice, 8) +
+              "\",\"profit\":\"" + DoubleToString(dealProfit, 2) +
+              "\",\"volume\":" + DoubleToString(dealVolume, 2) +
+              ",\"time\":" + IntegerToString(dealTime) + "}";
+   }
    json += "]}";
 
    HttpPost(BridgeUrl + "/bridge/sync", json);
