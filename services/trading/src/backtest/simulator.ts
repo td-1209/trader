@@ -41,15 +41,8 @@ export function simulate(trades: BacktestTrade[], config: SimulationConfig): Sim
 			}
 		}
 
-		// ポジションサイズ計算: 損失上限 = 資産 × maxLossPerTrade
-		const maxLossAmount = balance * config.maxLossPerTrade;
-		const riskPips = Math.abs(trade.entryPrice - trade.stopLossPrice) / config.pipSize;
-		if (riskPips <= 0) continue;
-
-		// 1pipあたりの価値 × lot数 = maxLossAmount
-		// lot数 = maxLossAmount / (riskPips * pipValue)
-		// pipValue for JPY pairs = 100 * pipSize (for 0.01 lot = 1000通貨)
-		const lotSize = maxLossAmount / (riskPips * config.pipSize * 100000);
+		// 固定ロット（0.01 lot = 1000通貨）
+		const lotSize = config.fixedLotSize;
 
 		// --- 過剰評価抑制: 本番で発生するコストをシミュレーションに反映 ---
 		// スプレッド: 買値と売値の差。エントリー時点でスプレッド分だけ不利に約定する

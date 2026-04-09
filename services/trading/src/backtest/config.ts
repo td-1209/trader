@@ -5,7 +5,7 @@ export interface SimulationConfig {
 	// 資金管理
 	initialBalance: number;       // 初期資産（円）
 	leverage: number;             // レバレッジ
-	maxLossPerTrade: number;      // 1トレードの損失上限（資産比率）
+	fixedLotSize: number;         // 固定ロットサイズ（0.01 = 1000通貨）
 	topUpAmount: number;          // ゼロカット後の再投入額（円）
 
 	// コスト
@@ -24,7 +24,7 @@ export interface SimulationConfig {
 export const DEFAULT_CONFIG: SimulationConfig = {
 	initialBalance: 10000,
 	leverage: 1000,
-	maxLossPerTrade: 0.01,         // 1%
+	fixedLotSize: 0.01,            // 0.01 lot = 1000通貨
 	topUpAmount: 10000,
 
 	spreadPips: 2,                 // 2pips
