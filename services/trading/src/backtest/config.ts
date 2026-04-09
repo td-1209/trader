@@ -5,7 +5,7 @@ export interface SimulationConfig {
 	// 資金管理
 	initialBalance: number;       // 初期資産（円）
 	leverage: number;             // レバレッジ
-	fixedLotSize: number;         // 固定ロットサイズ（0.01 = 1000通貨）
+	// ロットサイズはオーケストレーター（evaluate.ts）で管理
 	topUpAmount: number;          // ゼロカット後の再投入額（円）
 
 	// コスト
@@ -24,7 +24,7 @@ export interface SimulationConfig {
 export const DEFAULT_CONFIG: SimulationConfig = {
 	initialBalance: 10000,
 	leverage: 1000,
-	fixedLotSize: 0.01,            // 0.01 lot = 1000通貨
+	// ロットサイズはevaluate.tsのFIXED_LOTで管理
 	topUpAmount: 10000,
 
 	spreadPips: 2,                 // 2pips

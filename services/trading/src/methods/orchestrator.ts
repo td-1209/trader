@@ -5,12 +5,8 @@ import { mt5Bridge } from "../broker/mt5-bridge.js";
 import { sendDiscordNotification } from "@trader/notify";
 import { onFiveMinuteClose, fetchCandles } from "./aggregator.js";
 import { renderChart } from "./chart.js";
-import { pivotUpdate } from "./pivot-update.js";
-import type { Method, Signal } from "./types.js";
-
-const methodRegistry: Record<string, Method> = {
-	pivot_update: pivotUpdate,
-};
+import { evaluateMethod } from "./evaluate.js";
+import type { Signal } from "./types.js";
 
 /**
  * 5分足確定時にohlcから呼ばれるエントリーポイント。
@@ -56,12 +52,6 @@ async function executeMethod(
 	symbol: string,
 	timeframe: string,
 ) {
-	const impl = methodRegistry[method.name];
-	if (!impl) {
-		console.warn(`Unknown method: ${method.name}`);
-		return;
-	}
-
 	// 重複チェック: 同method + 同symbol + 同timeframeでopenポジションがあればスキップ
 	const openTrades = await db
 		.select()
@@ -77,11 +67,12 @@ async function executeMethod(
 	if (openTrades.length > 0) return;
 
 	const candles = await fetchCandles(symbol, timeframe);
-	if (candles.length < 5) return;
 
-	const signal = impl.execute(symbol, timeframe, candles);
+	// 共通ロジックで手法評価（evaluate.ts）
+	const result = evaluateMethod(method.name, symbol, timeframe, candles);
+	if (!result) return;
 
-	if (!signal || signal.rrRejected) return;
+	const { signal, volume, tp, sl } = result;
 
 	if (method.mode === "notify") {
 		await notifySignal(method, symbol, timeframe, signal, candles);
@@ -89,7 +80,7 @@ async function executeMethod(
 	}
 
 	console.log(`Signal: ${method.name} ${symbol} ${timeframe} → ${signal.position} @ ${signal.entryPrice} (mode: ${method.mode})`);
-	await placeSignalOrder(method, symbol, signal);
+	await placeSignalOrder(method, symbol, signal, volume, tp, sl);
 }
 
 async function notifySignal(
@@ -122,11 +113,10 @@ async function placeSignalOrder(
 	method: { id: string; name: string },
 	symbol: string,
 	signal: Signal,
+	volume: number,
+	tp: number | undefined,
+	sl: number | undefined,
 ) {
-	const volume = 0.01;
-	const tp = signal.useLimit ? signal.takeProfitPrice : undefined;
-	const sl = signal.useLimit ? signal.stopLossPrice : undefined;
-
 	try {
 		const result = await mt5Bridge.placeOrder(symbol, signal.position, volume, tp, sl);
 

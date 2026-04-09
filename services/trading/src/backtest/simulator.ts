@@ -41,8 +41,8 @@ export function simulate(trades: BacktestTrade[], config: SimulationConfig): Sim
 			}
 		}
 
-		// 固定ロット（0.01 lot = 1000通貨）
-		const lotSize = config.fixedLotSize;
+		// ロットサイズはオーケストレーター（evaluate.ts）が決定した値を使用
+		const lotSize = trade.volume;
 
 		// --- 過剰評価抑制: 本番で発生するコストをシミュレーションに反映 ---
 		// スプレッド: 買値と売値の差。エントリー時点でスプレッド分だけ不利に約定する

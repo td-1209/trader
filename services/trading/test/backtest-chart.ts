@@ -2,31 +2,31 @@ import { Canvas } from "skia-canvas";
 import { writeFileSync } from "node:fs";
 
 const snaps = [
-	{ month: "2024-04", balance: 6865, topUpTotal: 20000, tradeCount: 200, pnl: -13039 },
-	{ month: "2024-05", balance: 607, topUpTotal: 20000, tradeCount: 197, pnl: -6259 },
-	{ month: "2024-06", balance: 324, topUpTotal: 20000, tradeCount: 171, pnl: -283 },
-	{ month: "2024-07", balance: 8496, topUpTotal: 30000, tradeCount: 171, pnl: -1729 },
-	{ month: "2024-08", balance: 211440, topUpTotal: 30000, tradeCount: 200, pnl: 202943 },
-	{ month: "2024-09", balance: 176290, topUpTotal: 30000, tradeCount: 166, pnl: -35150 },
-	{ month: "2024-10", balance: 893490, topUpTotal: 30000, tradeCount: 219, pnl: 717200 },
-	{ month: "2024-11", balance: 1341140, topUpTotal: 30000, tradeCount: 174, pnl: 447650 },
-	{ month: "2024-12", balance: 636135, topUpTotal: 30000, tradeCount: 176, pnl: -705006 },
-	{ month: "2025-01", balance: 1152920, topUpTotal: 30000, tradeCount: 197, pnl: 516785 },
-	{ month: "2025-02", balance: 4527832, topUpTotal: 30000, tradeCount: 194, pnl: 3374912 },
-	{ month: "2025-03", balance: 8572088, topUpTotal: 30000, tradeCount: 234, pnl: 4044256 },
-	{ month: "2025-04", balance: 29255730, topUpTotal: 30000, tradeCount: 206, pnl: 20683642 },
-	{ month: "2025-05", balance: 10498781, topUpTotal: 30000, tradeCount: 204, pnl: -18756949 },
-	{ month: "2025-06", balance: 5621785, topUpTotal: 30000, tradeCount: 182, pnl: -4876996 },
-	{ month: "2025-07", balance: 28258957, topUpTotal: 30000, tradeCount: 197, pnl: 22637172 },
-	{ month: "2025-08", balance: 12010052, topUpTotal: 30000, tradeCount: 153, pnl: -16248904 },
-	{ month: "2025-09", balance: 2901608, topUpTotal: 30000, tradeCount: 194, pnl: -9108445 },
-	{ month: "2025-10", balance: 12301672, topUpTotal: 30000, tradeCount: 175, pnl: 9400064 },
-	{ month: "2025-11", balance: 240475, topUpTotal: 30000, tradeCount: 188, pnl: -12061197 },
-	{ month: "2025-12", balance: 205041, topUpTotal: 30000, tradeCount: 153, pnl: -35434 },
-	{ month: "2026-01", balance: 128287, topUpTotal: 30000, tradeCount: 196, pnl: -76754 },
-	{ month: "2026-02", balance: 346021, topUpTotal: 30000, tradeCount: 169, pnl: 217734 },
-	{ month: "2026-03", balance: 75169, topUpTotal: 30000, tradeCount: 199, pnl: -270852 },
-	{ month: "2026-04", balance: 23031, topUpTotal: 30000, tradeCount: 74, pnl: -52138 },
+	{ month: "2024-04", balance: 10470, topUpTotal: 10000, tradeCount: 201, pnl: 470 },
+	{ month: "2024-05", balance: 7440, topUpTotal: 10000, tradeCount: 199, pnl: -3030 },
+	{ month: "2024-06", balance: 7683, topUpTotal: 10000, tradeCount: 173, pnl: 243 },
+	{ month: "2024-07", balance: 6138, topUpTotal: 10000, tradeCount: 173, pnl: -1545 },
+	{ month: "2024-08", balance: 7422, topUpTotal: 10000, tradeCount: 200, pnl: 1284 },
+	{ month: "2024-09", balance: 16169, topUpTotal: 10000, tradeCount: 166, pnl: 8747 },
+	{ month: "2024-10", balance: 14498, topUpTotal: 10000, tradeCount: 219, pnl: -1671 },
+	{ month: "2024-11", balance: 14461, topUpTotal: 10000, tradeCount: 175, pnl: -37 },
+	{ month: "2024-12", balance: 17339, topUpTotal: 10000, tradeCount: 177, pnl: 2878 },
+	{ month: "2025-01", balance: 17889, topUpTotal: 10000, tradeCount: 197, pnl: 550 },
+	{ month: "2025-02", balance: 20277, topUpTotal: 10000, tradeCount: 197, pnl: 2388 },
+	{ month: "2025-03", balance: 22772, topUpTotal: 10000, tradeCount: 237, pnl: 2495 },
+	{ month: "2025-04", balance: 29375, topUpTotal: 10000, tradeCount: 206, pnl: 6603 },
+	{ month: "2025-05", balance: 37144, topUpTotal: 10000, tradeCount: 204, pnl: 7769 },
+	{ month: "2025-06", balance: 38676, topUpTotal: 10000, tradeCount: 183, pnl: 1532 },
+	{ month: "2025-07", balance: 41150, topUpTotal: 10000, tradeCount: 198, pnl: 2474 },
+	{ month: "2025-08", balance: 44017, topUpTotal: 10000, tradeCount: 154, pnl: 2867 },
+	{ month: "2025-09", balance: 46337, topUpTotal: 10000, tradeCount: 195, pnl: 2320 },
+	{ month: "2025-10", balance: 48732, topUpTotal: 10000, tradeCount: 175, pnl: 2396 },
+	{ month: "2025-11", balance: 48002, topUpTotal: 10000, tradeCount: 189, pnl: -730 },
+	{ month: "2025-12", balance: 50483, topUpTotal: 10000, tradeCount: 154, pnl: 2480 },
+	{ month: "2026-01", balance: 52161, topUpTotal: 10000, tradeCount: 196, pnl: 1678 },
+	{ month: "2026-02", balance: 55155, topUpTotal: 10000, tradeCount: 169, pnl: 2994 },
+	{ month: "2026-03", balance: 56807, topUpTotal: 10000, tradeCount: 201, pnl: 1652 },
+	{ month: "2026-04", balance: 56553, topUpTotal: 10000, tradeCount: 74, pnl: -255 },
 ];
 
 const W = 1000, H = 500;
@@ -40,24 +40,23 @@ const ctx = canvas.getContext("2d");
 ctx.fillStyle = "#1a1a2e";
 ctx.fillRect(0, 0, W, H);
 
-const maxBal = Math.max(...snaps.map(s => s.balance));
+const maxVal = Math.max(...snaps.map(s => s.balance));
 const gap = cw / snaps.length;
-const barW = gap * 0.7;
 
 // Title
 ctx.font = "16px sans-serif";
 ctx.fillStyle = "#ffffff";
 ctx.textAlign = "center";
-ctx.fillText("pivot_update USDJPY 5m — 月次残高推移", W / 2, 28);
+ctx.fillText("pivot_update USDJPY 5m — 残高 vs 投入額", W / 2, 28);
 
 // Y axis
 ctx.font = "11px sans-serif";
 ctx.textAlign = "right";
 for (let i = 0; i <= 5; i++) {
-	const val = maxBal * i / 5;
+	const val = maxVal * i / 5;
 	const y = PAD.top + ch - (ch * i / 5);
 	ctx.fillStyle = "#cccccc";
-	const label = val >= 1000000 ? (val / 1000000).toFixed(0) + "M" : val >= 1000 ? (val / 1000).toFixed(0) + "K" : String(Math.round(val));
+	const label = val >= 1000 ? (val / 1000).toFixed(0) + "K" : String(Math.round(val));
 	ctx.fillText(label, PAD.left - 8, y + 4);
 	ctx.strokeStyle = "#2a2a4a";
 	ctx.lineWidth = 0.5;
@@ -67,19 +66,59 @@ for (let i = 0; i <= 5; i++) {
 	ctx.stroke();
 }
 
-// Bars
+// Balance line (area fill)
+ctx.beginPath();
+ctx.moveTo(PAD.left + gap / 2, PAD.top + ch);
 for (let i = 0; i < snaps.length; i++) {
 	const x = PAD.left + gap * i + gap / 2;
-	const h = (snaps[i].balance / maxBal) * ch;
-	const y = PAD.top + ch - h;
+	const y = PAD.top + ch - (snaps[i].balance / maxVal) * ch;
+	ctx.lineTo(x, y);
+}
+ctx.lineTo(PAD.left + gap * (snaps.length - 1) + gap / 2, PAD.top + ch);
+ctx.closePath();
+ctx.fillStyle = "rgba(38, 166, 154, 0.3)";
+ctx.fill();
 
-	ctx.fillStyle = snaps[i].pnl >= 0 ? "#26a69a" : "#ef5350";
-	ctx.fillRect(x - barW / 2, y, barW, Math.max(h, 1));
+// Balance line
+ctx.strokeStyle = "#26a69a";
+ctx.lineWidth = 2.5;
+ctx.beginPath();
+for (let i = 0; i < snaps.length; i++) {
+	const x = PAD.left + gap * i + gap / 2;
+	const y = PAD.top + ch - (snaps[i].balance / maxVal) * ch;
+	if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+}
+ctx.stroke();
 
-	// Month label
-	ctx.fillStyle = "#cccccc";
-	ctx.font = "9px sans-serif";
-	ctx.textAlign = "center";
+// Balance dots
+for (let i = 0; i < snaps.length; i++) {
+	const x = PAD.left + gap * i + gap / 2;
+	const y = PAD.top + ch - (snaps[i].balance / maxVal) * ch;
+	ctx.fillStyle = "#26a69a";
+	ctx.beginPath();
+	ctx.arc(x, y, 3, 0, Math.PI * 2);
+	ctx.fill();
+}
+
+// TopUp line
+ctx.strokeStyle = "#ff9800";
+ctx.lineWidth = 2;
+ctx.setLineDash([6, 4]);
+ctx.beginPath();
+for (let i = 0; i < snaps.length; i++) {
+	const x = PAD.left + gap * i + gap / 2;
+	const y = PAD.top + ch - (snaps[i].topUpTotal / maxVal) * ch;
+	if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+}
+ctx.stroke();
+ctx.setLineDash([]);
+
+// Month labels
+ctx.fillStyle = "#cccccc";
+ctx.font = "9px sans-serif";
+ctx.textAlign = "center";
+for (let i = 0; i < snaps.length; i++) {
+	const x = PAD.left + gap * i + gap / 2;
 	ctx.save();
 	ctx.translate(x, PAD.top + ch + 15);
 	ctx.rotate(-Math.PI / 4);
@@ -89,15 +128,26 @@ for (let i = 0; i < snaps.length; i++) {
 
 // Legend
 ctx.font = "12px sans-serif";
-ctx.fillStyle = "#26a69a";
-ctx.fillRect(PAD.left + 10, PAD.top - 20, 12, 12);
+ctx.strokeStyle = "#26a69a";
+ctx.lineWidth = 2.5;
+ctx.setLineDash([]);
+ctx.beginPath();
+ctx.moveTo(PAD.left + 10, PAD.top - 14);
+ctx.lineTo(PAD.left + 30, PAD.top - 14);
+ctx.stroke();
 ctx.fillStyle = "#cccccc";
 ctx.textAlign = "left";
-ctx.fillText("利益月", PAD.left + 28, PAD.top - 10);
-ctx.fillStyle = "#ef5350";
-ctx.fillRect(PAD.left + 80, PAD.top - 20, 12, 12);
-ctx.fillStyle = "#cccccc";
-ctx.fillText("損失月", PAD.left + 98, PAD.top - 10);
+ctx.fillText("残高", PAD.left + 35, PAD.top - 10);
+
+ctx.strokeStyle = "#ff9800";
+ctx.lineWidth = 2;
+ctx.setLineDash([6, 4]);
+ctx.beginPath();
+ctx.moveTo(PAD.left + 80, PAD.top - 14);
+ctx.lineTo(PAD.left + 100, PAD.top - 14);
+ctx.stroke();
+ctx.setLineDash([]);
+ctx.fillText("累計投入額", PAD.left + 105, PAD.top - 10);
 
 const buf = Buffer.from(await canvas.toBuffer("png"));
 writeFileSync(new URL("./data/backtest-chart.png", import.meta.url), buf);
