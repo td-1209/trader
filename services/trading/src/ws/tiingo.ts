@@ -87,7 +87,8 @@ function connect() {
 				timestamp: quote.timestamp,
 			});
 
-			positionCache.checkStopLossTakeProfit(quote.symbol, Number(quote.bid), Number(quote.ask));
+			// TP/SL監視は指値なし(useLimit=false)の手法用。現在は全手法が指値ありのためコメントアウト。
+			// positionCache.checkStopLossTakeProfit(quote.symbol, Number(quote.bid), Number(quote.ask));
 		}
 	});
 
