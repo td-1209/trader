@@ -58,26 +58,73 @@ export async function runBacktest(config: BacktestConfig): Promise<BacktestResul
 		return [];
 	}
 
-	const allCandles = await db
+	// 常に5分足をDBから取得し、必要なら上位足に集約する
+	const allFiveMin = await db
 		.select()
 		.from(candles)
 		.where(
 			and(
 				eq(candles.symbol, config.symbol),
-				eq(candles.timeframe, config.timeframe),
+				eq(candles.timeframe, "5m"),
 			),
 		)
 		.orderBy(asc(candles.timestamp));
 
-	console.log(`Loaded ${allCandles.length} candles`);
+	console.log(`Loaded ${allFiveMin.length} 5m candles`);
 
-	const candleData: Candle[] = allCandles.map((c) => ({
-		open: Number(c.open),
-		high: Number(c.high),
-		low: Number(c.low),
-		close: Number(c.close),
-		timestamp: c.timestamp.toISOString(),
-	}));
+	let candleData: Candle[];
+
+	if (config.timeframe === "5m") {
+		candleData = allFiveMin.map((c) => ({
+			open: Number(c.open),
+			high: Number(c.high),
+			low: Number(c.low),
+			close: Number(c.close),
+			timestamp: c.timestamp.toISOString(),
+		}));
+	} else {
+		// 5分足から上位足に集約
+		const TIMEFRAME_MS: Record<string, number> = {
+			"1h": 60 * 60 * 1000,
+			"4h": 4 * 60 * 60 * 1000,
+			"1d": 24 * 60 * 60 * 1000,
+			"1w": 7 * 24 * 60 * 60 * 1000,
+		};
+		const intervalMs = TIMEFRAME_MS[config.timeframe];
+		if (!intervalMs) throw new Error(`Unknown timeframe: ${config.timeframe}`);
+
+		const aggMap = new Map<number, { open: number; high: number; low: number; close: number; timestamp: Date }>();
+		for (const row of allFiveMin) {
+			const t = row.timestamp.getTime();
+			const intervalStart = t - (t % intervalMs);
+			const existing = aggMap.get(intervalStart);
+			if (!existing) {
+				aggMap.set(intervalStart, {
+					open: Number(row.open),
+					high: Number(row.high),
+					low: Number(row.low),
+					close: Number(row.close),
+					timestamp: new Date(intervalStart),
+				});
+			} else {
+				existing.high = Math.max(existing.high, Number(row.high));
+				existing.low = Math.min(existing.low, Number(row.low));
+				existing.close = Number(row.close);
+			}
+		}
+
+		candleData = Array.from(aggMap.values())
+			.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+			.map((c) => ({
+				open: c.open,
+				high: c.high,
+				low: c.low,
+				close: c.close,
+				timestamp: c.timestamp.toISOString(),
+			}));
+
+		console.log(`Aggregated to ${candleData.length} ${config.timeframe} candles`);
+	}
 
 	const results: BacktestResult[] = [];
 
