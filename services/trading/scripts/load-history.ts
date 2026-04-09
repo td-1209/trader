@@ -40,8 +40,8 @@ async function fetchDay(date: string): Promise<TiingoCandle[]> {
 	const res = await fetch(url);
 
 	if (res.status === 429) {
-		console.log("  Rate limited, waiting 5 minutes...");
-		await sleep(300_000);
+		console.log("  Rate limited, waiting 1 hour...");
+		await sleep(3_600_000);
 		return fetchDay(date);
 	}
 
