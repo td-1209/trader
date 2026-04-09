@@ -18,8 +18,10 @@ app.post("/", async (c) => {
 	// バックグラウンド実行
 	(async () => {
 		try {
-			await runBacktest({ symbol, timeframe, startDate, endDate });
-			await analyzeBacktest("pivot_update", symbol);
+			const results = await runBacktest({ symbol, timeframe, startDate, endDate });
+			for (const result of results) {
+				await analyzeBacktest(result);
+			}
 		} catch (err) {
 			console.error("Backtest failed:", err);
 		}

@@ -1,0 +1,124 @@
+import type { BacktestTrade } from "./runner.js";
+import type { SimulationConfig } from "./config.js";
+
+export interface MonthlySnapshot {
+	month: string;         // YYYY-MM
+	balance: number;       // 月末残高
+	topUpTotal: number;    // 累計投入額
+	tradeCount: number;    // 月間トレード数
+	pnl: number;           // 月間損益（円）
+}
+
+export interface SimulationResult {
+	totalTrades: number;
+	winRate: string;
+	avgRR: string;
+	roi: string;              // ROI（%）= 最終残高 / 累計投入額 - 1
+	finalBalance: number;
+	totalTopUp: number;       // 累計投入額
+	zeroCutCount: number;     // ゼロカット回数
+	monthlySnapshots: MonthlySnapshot[];
+}
+
+export function simulate(trades: BacktestTrade[], config: SimulationConfig): SimulationResult {
+	let balance = config.initialBalance;
+	let totalTopUp = config.initialBalance;
+	let zeroCutCount = 0;
+
+	// 月次集計用
+	const monthlyMap = new Map<string, { balance: number; topUpTotal: number; tradeCount: number; pnl: number }>();
+	let currentMonth = "";
+
+	let wins = 0;
+	let totalRR = 0;
+
+	for (const trade of trades) {
+		const month = trade.entryAt.slice(0, 7); // YYYY-MM
+		if (month !== currentMonth) {
+			currentMonth = month;
+			if (!monthlyMap.has(month)) {
+				monthlyMap.set(month, { balance: balance, topUpTotal: totalTopUp, tradeCount: 0, pnl: 0 });
+			}
+		}
+
+		// ポジションサイズ計算: 損失上限 = 資産 × maxLossPerTrade
+		const maxLossAmount = balance * config.maxLossPerTrade;
+		const riskPips = Math.abs(trade.entryPrice - trade.stopLossPrice) / config.pipSize;
+		if (riskPips <= 0) continue;
+
+		// 1pipあたりの価値 × lot数 = maxLossAmount
+		// lot数 = maxLossAmount / (riskPips * pipValue)
+		// pipValue for JPY pairs = 100 * pipSize (for 0.01 lot = 1000通貨)
+		const lotSize = maxLossAmount / (riskPips * config.pipSize * 100000);
+
+		// コスト計算
+		const spreadCost = config.spreadPips * config.pipSize * lotSize * 100000;
+		const slippageCost = config.slippagePips * config.pipSize * lotSize * 100000;
+
+		// スワップ計算（保有日数）
+		const entryTime = new Date(trade.entryAt).getTime();
+		const exitTime = new Date(trade.exitAt).getTime();
+		const holdingDays = Math.max(0, (exitTime - entryTime) / (24 * 60 * 60 * 1000));
+		const swapRate = trade.position === "long" ? config.swapPerDayLong : config.swapPerDayShort;
+		const swapCost = swapRate * config.pipSize * lotSize * 100000 * holdingDays;
+
+		// 損益計算（pips → 円）
+		const rawPnlPips = trade.profitLoss / config.pipSize;
+		const rawPnl = rawPnlPips * config.pipSize * lotSize * 100000;
+
+		// 最終損益 = 生損益 - スプレッド - スリッページ + スワップ
+		const netPnl = rawPnl - spreadCost - slippageCost + swapCost;
+
+		// RR計算
+		const reward = Math.abs(trade.entryPrice - trade.takeProfitPrice);
+		const risk = Math.abs(trade.entryPrice - trade.stopLossPrice);
+		if (risk > 0) totalRR += reward / risk;
+
+		if (trade.profitLoss > 0) wins++;
+
+		// 残高更新
+		balance += netPnl;
+
+		// ゼロカット判定
+		if (balance <= 0) {
+			balance = config.topUpAmount;
+			totalTopUp += config.topUpAmount;
+			zeroCutCount++;
+		}
+
+		// 月次集計更新
+		const snap = monthlyMap.get(month);
+		if (snap) {
+			snap.tradeCount++;
+			snap.pnl += netPnl;
+			snap.balance = balance;
+			snap.topUpTotal = totalTopUp;
+		}
+	}
+
+	const totalTrades = trades.length;
+	const winRate = totalTrades > 0 ? ((wins / totalTrades) * 100).toFixed(1) : "0";
+	const avgRR = totalTrades > 0 ? (totalRR / totalTrades).toFixed(2) : "0";
+	const roi = totalTopUp > 0 ? (((balance / totalTopUp) - 1) * 100).toFixed(1) : "0";
+
+	const monthlySnapshots: MonthlySnapshot[] = Array.from(monthlyMap.entries())
+		.sort(([a], [b]) => a.localeCompare(b))
+		.map(([month, snap]) => ({
+			month,
+			balance: Math.round(snap.balance),
+			topUpTotal: Math.round(snap.topUpTotal),
+			tradeCount: snap.tradeCount,
+			pnl: Math.round(snap.pnl),
+		}));
+
+	return {
+		totalTrades,
+		winRate,
+		avgRR,
+		roi,
+		finalBalance: Math.round(balance),
+		totalTopUp: Math.round(totalTopUp),
+		zeroCutCount,
+		monthlySnapshots,
+	};
+}

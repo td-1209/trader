@@ -19,7 +19,7 @@ const TIMEFRAME_MS: Record<string, number> = {
 	"1w": 7 * 24 * 60 * 60 * 1000,
 };
 
-const LOOKBACK: Record<string, number> = {
+export const LOOKBACK: Record<string, number> = {
 	"5m": 144,
 	"1h": 120,
 	"4h": 180,

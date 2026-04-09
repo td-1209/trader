@@ -1,9 +1,9 @@
-import { eq, and, asc, desc } from "drizzle-orm";
+import { eq, and, asc } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { candles, methods, trades } from "../db/schema.js";
+import { candles, methods } from "../db/schema.js";
 import { pivotUpdate } from "../methods/pivot-update.js";
-import { findLines } from "../methods/line.js";
-import type { Candle, Method, Signal } from "../methods/types.js";
+import { LOOKBACK } from "../methods/aggregator.js";
+import type { Candle, Method } from "../methods/types.js";
 
 const methodRegistry: Record<string, Method> = {
 	pivot_update: pivotUpdate,
@@ -16,8 +16,7 @@ interface BacktestConfig {
 	endDate: string;
 }
 
-interface BacktestTrade {
-	methodId: string;
+export interface BacktestTrade {
 	methodName: string;
 	symbol: string;
 	position: string;
@@ -25,18 +24,24 @@ interface BacktestTrade {
 	signalPrice: number;
 	takeProfitPrice: number;
 	stopLossPrice: number;
-	exitPrice?: number;
-	profitLoss?: number;
+	exitPrice: number;
+	profitLoss: number;
 	reason: string;
-	entryAt: Date;
-	exitAt?: Date;
-	exitReason?: string;
+	entryAt: string;
+	exitAt: string;
+	exitReason: string;
 }
 
-export async function runBacktest(config: BacktestConfig): Promise<string> {
+export interface BacktestResult {
+	methodName: string;
+	symbol: string;
+	timeframe: string;
+	trades: BacktestTrade[];
+}
+
+export async function runBacktest(config: BacktestConfig): Promise<BacktestResult[]> {
 	console.log(`Backtest: ${config.symbol} ${config.timeframe} from ${config.startDate} to ${config.endDate}`);
 
-	// 対象の手法を取得
 	const activeMethods = await db
 		.select()
 		.from(methods)
@@ -53,10 +58,9 @@ export async function runBacktest(config: BacktestConfig): Promise<string> {
 
 	if (matching.length === 0) {
 		console.log("No matching methods found");
-		return "no_methods";
+		return [];
 	}
 
-	// 全期間のcandlesを取得
 	const allCandles = await db
 		.select()
 		.from(candles)
@@ -78,29 +82,29 @@ export async function runBacktest(config: BacktestConfig): Promise<string> {
 		timestamp: c.timestamp.toISOString(),
 	}));
 
-	// 手法ごとにバックテスト実行
+	const results: BacktestResult[] = [];
+
 	for (const method of matching) {
 		const impl = methodRegistry[method.name];
 		if (!impl) continue;
 
 		console.log(`\nRunning ${method.name} for ${config.symbol}...`);
-		await runMethodBacktest(method, impl, config, candleData);
+		const trades = runMethodBacktest(method.name, impl, config, candleData);
+		results.push({ methodName: method.name, symbol: config.symbol, timeframe: config.timeframe, trades });
 	}
 
-	return "completed";
+	return results;
 }
 
-async function runMethodBacktest(
-	method: { id: string; name: string },
+function runMethodBacktest(
+	methodName: string,
 	impl: Method,
 	config: BacktestConfig,
 	allCandles: Candle[],
-) {
-	const windowSize = 144; // 12時間分
-	let openTrade: BacktestTrade | null = null;
-	let tradeCount = 0;
-	let winCount = 0;
-	let lossCount = 0;
+): BacktestTrade[] {
+	const windowSize = LOOKBACK[config.timeframe] ?? 144;
+	const completedTrades: BacktestTrade[] = [];
+	let openTrade: Omit<BacktestTrade, "exitPrice" | "profitLoss" | "exitAt" | "exitReason"> | null = null;
 
 	for (let i = windowSize; i < allCandles.length; i++) {
 		const window = allCandles.slice(i - windowSize, i + 1);
@@ -110,11 +114,7 @@ async function runMethodBacktest(
 		if (openTrade) {
 			const closed = checkExit(openTrade, currentCandle);
 			if (closed) {
-				openTrade = closed;
-				await persistTrade(openTrade, method.id);
-				tradeCount++;
-				if ((openTrade.profitLoss ?? 0) > 0) winCount++;
-				else lossCount++;
+				completedTrades.push(closed);
 				openTrade = null;
 			}
 		}
@@ -124,8 +124,7 @@ async function runMethodBacktest(
 			const signal = impl.execute(config.symbol, config.timeframe, window);
 			if (signal && !signal.rrRejected) {
 				openTrade = {
-					methodId: method.id,
-					methodName: method.name,
+					methodName,
 					symbol: config.symbol,
 					position: signal.position,
 					entryPrice: signal.entryPrice,
@@ -133,7 +132,7 @@ async function runMethodBacktest(
 					takeProfitPrice: signal.takeProfitPrice,
 					stopLossPrice: signal.stopLossPrice,
 					reason: signal.reason,
-					entryAt: new Date(currentCandle.timestamp),
+					entryAt: currentCandle.timestamp,
 				};
 			}
 		}
@@ -142,94 +141,45 @@ async function runMethodBacktest(
 	// 未決済ポジションを最終価格で強制決済
 	if (openTrade) {
 		const lastCandle = allCandles[allCandles.length - 1];
-		openTrade.exitPrice = lastCandle.close;
-		openTrade.exitAt = new Date(lastCandle.timestamp);
-		openTrade.exitReason = "backtest_end";
-		openTrade.profitLoss = calcProfitLoss(openTrade);
-		await persistTrade(openTrade, method.id);
-		tradeCount++;
-		if ((openTrade.profitLoss ?? 0) > 0) winCount++;
-		else lossCount++;
+		const pl = calcProfitLoss(openTrade.position, openTrade.entryPrice, lastCandle.close);
+		completedTrades.push({
+			...openTrade,
+			exitPrice: lastCandle.close,
+			exitAt: lastCandle.timestamp,
+			exitReason: "backtest_end",
+			profitLoss: pl,
+		});
 	}
 
-	const winRate = tradeCount > 0 ? ((winCount / tradeCount) * 100).toFixed(1) : "N/A";
-	console.log(`${method.name}: ${tradeCount} trades, ${winCount}W/${lossCount}L (${winRate}%)`);
+	const wins = completedTrades.filter((t) => t.profitLoss > 0).length;
+	const winRate = completedTrades.length > 0 ? ((wins / completedTrades.length) * 100).toFixed(1) : "N/A";
+	console.log(`${methodName}: ${completedTrades.length} trades, ${wins}W/${completedTrades.length - wins}L (${winRate}%)`);
+
+	return completedTrades;
 }
 
-function checkExit(trade: BacktestTrade, candle: Candle): BacktestTrade | null {
+function checkExit(
+	trade: { position: string; entryPrice: number; takeProfitPrice: number; stopLossPrice: number; methodName: string; symbol: string; signalPrice: number; reason: string; entryAt: string },
+	candle: Candle,
+): BacktestTrade | null {
 	if (trade.position === "long") {
-		// 損切り: 安値がSL以下
 		if (candle.low <= trade.stopLossPrice) {
-			return {
-				...trade,
-				exitPrice: trade.stopLossPrice,
-				exitAt: new Date(candle.timestamp),
-				exitReason: "stop_loss",
-				profitLoss: calcProfitLoss({ ...trade, exitPrice: trade.stopLossPrice }),
-			};
+			return { ...trade, exitPrice: trade.stopLossPrice, exitAt: candle.timestamp, exitReason: "stop_loss", profitLoss: calcProfitLoss("long", trade.entryPrice, trade.stopLossPrice) };
 		}
-		// 利確: 高値がTP以上
 		if (candle.high >= trade.takeProfitPrice) {
-			return {
-				...trade,
-				exitPrice: trade.takeProfitPrice,
-				exitAt: new Date(candle.timestamp),
-				exitReason: "take_profit",
-				profitLoss: calcProfitLoss({ ...trade, exitPrice: trade.takeProfitPrice }),
-			};
+			return { ...trade, exitPrice: trade.takeProfitPrice, exitAt: candle.timestamp, exitReason: "take_profit", profitLoss: calcProfitLoss("long", trade.entryPrice, trade.takeProfitPrice) };
 		}
 	} else {
-		// short: 損切り: 高値がSL以上
 		if (candle.high >= trade.stopLossPrice) {
-			return {
-				...trade,
-				exitPrice: trade.stopLossPrice,
-				exitAt: new Date(candle.timestamp),
-				exitReason: "stop_loss",
-				profitLoss: calcProfitLoss({ ...trade, exitPrice: trade.stopLossPrice }),
-			};
+			return { ...trade, exitPrice: trade.stopLossPrice, exitAt: candle.timestamp, exitReason: "stop_loss", profitLoss: calcProfitLoss("short", trade.entryPrice, trade.stopLossPrice) };
 		}
-		// short: 利確: 安値がTP以下
 		if (candle.low <= trade.takeProfitPrice) {
-			return {
-				...trade,
-				exitPrice: trade.takeProfitPrice,
-				exitAt: new Date(candle.timestamp),
-				exitReason: "take_profit",
-				profitLoss: calcProfitLoss({ ...trade, exitPrice: trade.takeProfitPrice }),
-			};
+			return { ...trade, exitPrice: trade.takeProfitPrice, exitAt: candle.timestamp, exitReason: "take_profit", profitLoss: calcProfitLoss("short", trade.entryPrice, trade.takeProfitPrice) };
 		}
 	}
 	return null;
 }
 
-function calcProfitLoss(trade: { position: string; entryPrice: number; exitPrice?: number }): number {
-	if (!trade.exitPrice) return 0;
-	return trade.position === "long"
-		? trade.exitPrice - trade.entryPrice
-		: trade.entryPrice - trade.exitPrice;
-}
-
-async function persistTrade(trade: BacktestTrade, methodId: string) {
-	await db.insert(trades).values({
-		method: methodId,
-		symbol: trade.symbol,
-		domain: "fx",
-		position: trade.position,
-		status: "exited",
-		exposure: "1000",
-		entryPrice: String(trade.entryPrice),
-		signalPrice: String(trade.signalPrice),
-		slippage: "0",
-		exitPrice: trade.exitPrice ? String(trade.exitPrice) : null,
-		takeProfitPrice: String(trade.takeProfitPrice),
-		stopLossPrice: String(trade.stopLossPrice),
-		profitLoss: trade.profitLoss ? String(trade.profitLoss) : null,
-		isDemo: true,
-		isManual: false,
-		reasonDescription: trade.reason,
-		resultDescription: trade.exitReason ?? null,
-		entryAt: trade.entryAt,
-		exitAt: trade.exitAt ?? null,
-	});
+function calcProfitLoss(position: string, entryPrice: number, exitPrice: number): number {
+	return position === "long" ? exitPrice - entryPrice : entryPrice - exitPrice;
 }
