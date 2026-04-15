@@ -86,6 +86,8 @@ async function fillGaps(reason: string): Promise<void> {
 	const failed = results.filter((r) => r.error);
 	const totalInserted = succeeded.reduce((sum, r) => sum + r.inserted, 0);
 
+	if (totalInserted === 0 && failed.length === 0) return;
+
 	const lines = [
 		`📊 ギャップ埋め完了 (${reason})`,
 		`成功: ${succeeded.length}/${results.length} 通貨、合計 ${totalInserted} 本`,
